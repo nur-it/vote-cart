@@ -2,8 +2,6 @@
 
 A real-time ecommerce category voting platform. Users select the shopping categories they genuinely shop for, cast a single vote, and watch live percentages update as more people participate — just like a YouTube poll.
 
-![VoteCart](public/logo.svg)
-
 ## Features
 
 - **Real-time poll** — live vote percentages update instantly after each submission
