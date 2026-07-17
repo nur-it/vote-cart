@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// A grouping/aisle that bundles related voting options
+// e.g. "Apparel & Fashion", "Food & Grocery", "Electronics"
+model Section {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  icon        String // lucide icon name
+  color       String // tailwind color token: rose | amber | emerald | ...
+  order       Int      @default(0)
+  options     Option[]
+
+  @@map("sections")
+}
+
+// A single voting category/option that users can tick.
+// e.g. "Kids' Clothing", "Fresh Produce", "Smartphones"
+model Option {
+  id          String   @id @default(cuid())
+  sectionId   String
+  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  slug        String   @unique
+  name        String
+  emoji       String
+  description String
+  votes       Int      @default(0)
+  order       Int      @default(0)
+  isCustom    Boolean  @default(false) // true = added by a voter
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sectionId])
+  @@map("options")
+}
+
+// One vote submission (a voter may tick multiple options).
+// voterCount = count(Vote), totalVotes = sum(Option.votes)
+model Vote {
+  id          String   @id @default(cuid())
+  ip          String   // hashed IP for deduplication
+  optionIds   String[] // which options this voter picked
+  optionCount Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  @@unique([ip])
+  @@map("votes")
+}
