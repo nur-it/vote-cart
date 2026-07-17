@@ -96,7 +96,9 @@ export async function computeResults(votedOptionIds: string[] = []): Promise<Pol
   });
 
   const allOptions = sectionResults.flatMap((s) => s.options);
-  const top = allOptions.length ? allOptions.reduce((a, b) => (b.votes > a.votes ? b : a)) : null;
+  const top = allOptions.length && allOptions.some((o) => o.votes > 0)
+    ? allOptions.reduce((a, b) => (b.votes > a.votes ? b : a))
+    : null;
   const topSection = top ? sectionResults.find((s) => s.id === top.sectionId) ?? null : null;
 
   return {
