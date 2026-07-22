@@ -23,8 +23,12 @@ function useActiveSection(sections: Props["sections"], sectionRefs: Props["secti
       const el = map.get(s.id);
       if (!el) return;
       const obs = new IntersectionObserver(
-        ([entry]) => { if (entry.isIntersecting) setActiveId(s.id); },
-        { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveId(s.id);
+          }
+        },
+        { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
       );
       obs.observe(el);
       observers.push(obs);
@@ -39,7 +43,7 @@ function useJumpTo(sectionRefs: Props["sectionRefs"]) {
   return (id: string) => {
     const el = sectionRefs.current?.get(id);
     if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 120;
+    const y = el.getBoundingClientRect().top + window.scrollY - 100;
     window.scrollTo({ top: y, behavior: "smooth" });
   };
 }
@@ -91,13 +95,20 @@ export function SectionPills({ sections, sectionRefs }: Props) {
   useEffect(() => {
     if (!activeId || !pillsRef.current) return;
     const pill = pillsRef.current.querySelector(`[data-id="${activeId}"]`) as HTMLElement | null;
-    pill?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    if (pill && pillsRef.current) {
+      const container = pillsRef.current;
+      const pillLeft = pill.offsetLeft;
+      const pillWidth = pill.offsetWidth;
+      const containerWidth = container.clientWidth;
+      const targetScrollLeft = pillLeft - containerWidth / 2 + pillWidth / 2;
+      container.scrollTo({ left: targetScrollLeft, behavior: "smooth" });
+    }
   }, [activeId]);
 
   return (
     <div
       ref={pillsRef}
-      className="xl:hidden -mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+      className="xl:hidden -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 pt-0.5"
       style={{ scrollbarWidth: "none" }}
     >
       {sections.map((s) => {
@@ -110,7 +121,7 @@ export function SectionPills({ sections, sectionRefs }: Props) {
             type="button"
             onClick={() => jumpTo(s.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap",
+              "flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap sm:gap-1.5 sm:px-3 sm:text-xs",
               isActive
                 ? cn(c.bg, c.text, c.border)
                 : "border-border bg-card text-muted-foreground hover:bg-accent"

@@ -18,8 +18,8 @@ export function HeroHeader({ hasVoted }: { hasVoted: boolean }) {
   if (hasVoted) return null;
 
   return (
-    <div className="space-y-2 text-center sm:text-left">
-      <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
+    <div className="py-1">
+      <h1 className="text-2xl font-extrabold tracking-tight leading-tight sm:text-4xl">
         Which shopping categories do you{" "}
         <span className="bg-linear-to-r from-rose-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent">
           love most?
@@ -31,9 +31,9 @@ export function HeroHeader({ hasVoted }: { hasVoted: boolean }) {
 
 export function HeroStats({ data }: HeroStatsProps) {
   return (
-    <div className="mt-8 rounded-xl border bg-card/60 px-4 py-3 text-xs text-muted-foreground backdrop-blur-xs">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-center sm:text-left">
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-start sm:gap-6">
+    <div className="mt-6 rounded-xl border bg-card/60 px-3 py-2.5 text-xs text-muted-foreground backdrop-blur-xs sm:mt-8 sm:px-4 sm:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 text-center sm:text-left">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start sm:gap-6">
           <div className="flex items-center gap-1.5">
             <Users className="size-3.5 text-rose-500" />
             <span className="font-semibold text-foreground">

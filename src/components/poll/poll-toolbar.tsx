@@ -46,16 +46,16 @@ export function PollToolbar({
   resultCount,
 }: PollToolbarProps) {
   return (
-    <div className="sticky top-[57px] z-30 -mx-4 border-b bg-background/80 px-4 py-3 backdrop-blur-md sm:top-[65px] sm:mx-0 sm:rounded-xl sm:border sm:px-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+    <div className="sticky top-[52px] z-30 -mx-4 border-b bg-background/90 px-3 py-2 backdrop-blur-md sm:top-[65px] sm:mx-0 sm:rounded-xl sm:border sm:px-3 sm:py-3">
+      <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center">
         {/* Search */}
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground sm:left-3 sm:size-4" />
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search 100+ categories… (e.g. kids, coffee, sneakers)"
-            className="h-10 pl-9 pr-9"
+            placeholder="Search categories… (e.g. kids, coffee)"
+            className="h-8.5 pl-8 pr-8 text-xs sm:h-10 sm:pl-9 sm:pr-9 sm:text-sm"
             aria-label="Search categories"
           />
           {search && (
@@ -63,17 +63,17 @@ export function PollToolbar({
               type="button"
               onClick={() => onSearchChange("")}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              <X className="size-4" />
+              <X className="size-3.5" />
             </button>
           )}
         </div>
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 sm:justify-start sm:gap-2">
           <Select value={sort} onValueChange={(v) => onSortChange(v as SortKey)}>
-            <SelectTrigger className="h-10 w-[150px]" aria-label="Sort options">
+            <SelectTrigger className="h-8 text-[11px] font-medium sm:h-10 sm:w-[150px] sm:text-xs" aria-label="Sort options">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -84,20 +84,20 @@ export function PollToolbar({
           </Select>
 
           {/* View toggle */}
-          <div className="flex h-10 items-center rounded-md border bg-card p-0.5">
+          <div className="flex h-8 items-center rounded-md border bg-card p-0.5 sm:h-10">
             <button
               type="button"
               aria-label="Grid view"
               aria-pressed={view === "grid"}
               onClick={() => onViewChange("grid")}
               className={cn(
-                "flex size-9 items-center justify-center rounded-[5px] transition-colors",
+                "flex size-7 items-center justify-center rounded-[4px] transition-colors sm:size-9 sm:rounded-[5px]",
                 view === "grid"
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <LayoutGrid className="size-4" />
+              <LayoutGrid className="size-3.5 sm:size-4" />
             </button>
             <button
               type="button"
@@ -105,34 +105,34 @@ export function PollToolbar({
               aria-pressed={view === "list"}
               onClick={() => onViewChange("list")}
               className={cn(
-                "flex size-9 items-center justify-center rounded-[5px] transition-colors",
+                "flex size-7 items-center justify-center rounded-[4px] transition-colors sm:size-9 sm:rounded-[5px]",
                 view === "list"
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <List className="size-4" />
+              <List className="size-3.5 sm:size-4" />
             </button>
           </div>
 
           {/* Live results toggle */}
-          <div className="flex h-10 items-center gap-2 rounded-md border bg-card px-3">
+          <div className="flex h-8 items-center gap-1.5 rounded-md border bg-card px-2 text-[11px] sm:h-10 sm:gap-2 sm:px-3 sm:text-xs">
             <Switch
               id="live-results"
               checked={showResults}
               onCheckedChange={onShowResultsChange}
               aria-label="Toggle live results"
+              className="scale-75 sm:scale-100"
             />
-            <span className="whitespace-nowrap text-xs font-medium">
-              Live results
+            <span className="whitespace-nowrap font-medium">
+              Live
             </span>
           </div>
-
         </div>
       </div>
 
       {search && (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-1.5 text-[11px] text-muted-foreground sm:text-xs">
           {resultCount} categor{resultCount === 1 ? "y" : "ies"} match
           {" “"}
           {search}
