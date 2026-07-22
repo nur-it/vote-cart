@@ -14,13 +14,11 @@ function compact(n: number): string {
   return String(n);
 }
 
-export function HeroHeader({ hasVoted }: { hasVoted: boolean }) {
-  if (hasVoted) return null;
-
+export function HeroHeader({ hasVoted }: { hasVoted?: boolean }) {
   return (
     <div className="py-1">
       <h1 className="text-2xl font-extrabold tracking-tight leading-tight sm:text-4xl">
-        Which shopping categories do you{" "}
+        Which shopping categories do {hasVoted ? "people" : "you"}{" "}
         <span className="bg-linear-to-r from-rose-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent">
           love most?
         </span>
