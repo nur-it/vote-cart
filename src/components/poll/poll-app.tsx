@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { AddOptionResponse, PollResult } from "@/lib/types";
 import { FloatingVoteBar } from "./floating-vote-bar";
-import { HeroStats } from "./hero-stats";
+import { HeroHeader, HeroStats } from "./hero-stats";
 import { PollFooter } from "./poll-footer";
 import { PollHeader } from "./poll-header";
 import { PollToolbar, type SortKey, type ViewMode } from "./poll-toolbar";
@@ -293,7 +293,7 @@ export function PollApp() {
           <ErrorState onRetry={() => refetch()} />
         ) : data ? (
           <div className="space-y-5">
-            <HeroStats data={data} hasVoted={hasVoted} />
+            <HeroHeader hasVoted={hasVoted} />
 
             <PollToolbar
               search={search}
@@ -374,6 +374,9 @@ export function PollApp() {
                 keyword.
               </div>
             )}
+
+            {/* Simple stats bar placed below all lists & above footer */}
+            <HeroStats data={data} hasVoted={hasVoted} />
           </div>
         ) : null}
       </main>

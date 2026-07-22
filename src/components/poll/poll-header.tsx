@@ -39,25 +39,7 @@ export function PollHeader({ voterCount, totalVotes }: PollHeaderProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          <div className="hidden items-center gap-3 text-right sm:flex">
-            <div className="leading-tight">
-              <div className="text-sm font-bold tabular-nums">
-                {compact(voterCount)}
-              </div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Voters
-              </div>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="leading-tight">
-              <div className="text-sm font-bold tabular-nums">
-                {compact(totalVotes)}
-              </div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Votes
-              </div>
-            </div>
-          </div>
+          
           <ThemeToggle />
         </div>
       </div>
