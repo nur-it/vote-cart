@@ -21,7 +21,7 @@ export function HeroHeader({ hasVoted }: { hasVoted: boolean }) {
     <div className="py-1">
       <h1 className="text-2xl font-extrabold tracking-tight leading-tight sm:text-4xl">
         Which shopping categories do you{" "}
-        <span className="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent">
+        <span className="bg-linear-to-r from-rose-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent">
           love most?
         </span>
       </h1>
