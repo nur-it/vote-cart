@@ -16,30 +16,26 @@ function compact(n: number): string {
 
 export function PollHeader({ voterCount, totalVotes }: PollHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16">
+    <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-13 max-w-6xl items-center justify-between px-3.5 sm:h-16 sm:px-4">
         <div className="flex items-center gap-2.5">
-          <div className="relative flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Vote className="size-5" />
+          <div className="relative flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs sm:size-9">
+            <Vote className="size-4.5 sm:size-5" />
           </div>
           <div className="leading-tight">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-bold tracking-tight sm:text-lg">
                 VoteCart
               </span>
-              <span className="hidden items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 sm:inline-flex">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                 <span className="live-dot inline-block size-1.5 rounded-full bg-emerald-500" />
                 LIVE
               </span>
             </div>
-            <span className="hidden text-[11px] text-muted-foreground sm:block">
-              Category popularity poll
-            </span>
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          
+        <div className="flex items-center gap-2">
           <ThemeToggle />
         </div>
       </div>

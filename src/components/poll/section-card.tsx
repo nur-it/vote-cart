@@ -67,39 +67,39 @@ export function SectionCard({
       )}
     >
       {/* Section header */}
-      <div className={cn("relative border-b p-4", c.bg)}>
-        <div className="flex items-start gap-3">
+      <div className={cn("relative border-b p-3 sm:p-4", c.bg)}>
+        <div className="flex items-start gap-2.5 sm:gap-3">
           <div
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl bg-background shadow-sm ring-1",
+              "flex size-8 shrink-0 items-center justify-center rounded-lg bg-background shadow-xs ring-1 sm:size-10 sm:rounded-xl",
               c.ring
             )}
           >
-            <SectionIcon name={section.icon} className={cn("size-5", c.text)} />
+            <SectionIcon name={section.icon} className={cn("size-4 sm:size-5", c.text)} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold leading-tight">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h3 className="text-sm font-semibold leading-tight sm:text-base">
                 {section.name}
               </h3>
-              <Badge variant="outline" className="border-border/60">
+              <Badge variant="outline" className="border-border/60 text-[10px] px-1.5 py-0 sm:text-xs sm:px-2 sm:py-0.5">
                 {options.length} options
               </Badge>
             </div>
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+            <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground sm:text-xs">
               {section.description}
             </p>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:mt-3 sm:gap-x-4 sm:text-xs">
           <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Users className="size-3.5" />
+            <Users className="size-3 sm:size-3.5" />
             {section.totalVotes.toLocaleString("en-US")} votes
           </span>
           {mode === "result" && section.leadingOptionName && (
             <span className={cn("inline-flex items-center gap-1 font-medium", c.text)}>
-              <TrendingUp className="size-3.5" />
+              <TrendingUp className="size-3 sm:size-3.5" />
               Leading: {section.leadingOptionName}
               {section.leadingOptionPercentage != null && (
                 <span className="tabular-nums opacity-80">
@@ -112,7 +112,7 @@ export function SectionCard({
       </div>
 
       {/* Options */}
-      <div className="grid gap-2 p-3 sm:p-4">
+      <div className="grid gap-1.5 p-2.5 sm:gap-2 sm:p-4">
         {visibleOptions.map((opt) => (
           <OptionRow
             key={opt.id}

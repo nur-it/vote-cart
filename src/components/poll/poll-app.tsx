@@ -286,13 +286,13 @@ export function PollApp() {
         totalVotes={data?.totalVotes ?? 0}
       />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:pb-32">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-3.5 pb-24 pt-4 sm:px-4 sm:pb-32 sm:pt-6">
         {isLoading ? (
           <LoadingState />
         ) : isError ? (
           <ErrorState onRetry={() => refetch()} />
         ) : data ? (
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-6">
             <HeroHeader hasVoted={hasVoted} />
 
             <PollToolbar
@@ -310,12 +310,12 @@ export function PollApp() {
 
             {/* Status banner */}
             {mode === "result" && !hasVoted && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 sm:px-4 sm:py-2.5 sm:text-sm">
                 👀 Live results preview — cast your vote to lock in your picks.
               </div>
             )}
             {mode === "select" && (
-              <div className="rounded-xl border bg-card px-4 py-2.5 text-sm text-muted-foreground">
+              <div className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground sm:px-4 sm:py-2.5 sm:text-sm">
                 ✅ Select the categories you shop for, then tap{" "}
                 <span className="font-semibold text-foreground">Cast vote</span>{" "}
                 to reveal live percentages.
