@@ -133,7 +133,7 @@ export function SectionCard({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className={cn(
-              "flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              "flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground text-center",
               c.text && isExpanded && cn("border-current/30", c.text)
             )}
           >
