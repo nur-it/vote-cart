@@ -11,6 +11,7 @@ import { SectionIcon } from "./icon-map";
 import { OptionRow } from "./option-row";
 import type { OptionResult, SectionResult } from "@/lib/types";
 import { SECTION_COLORS } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 const INITIAL_VISIBLE = 4;
 
@@ -48,6 +49,7 @@ export function SectionCard({
   const c = SECTION_COLORS[section.color];
   const [expanded, setExpanded] = useState(false);
   const isExpanded = expanded || expandedBySearch;
+  const { t } = useLang();
 
   if (options.length === 0) return null;
 
@@ -83,7 +85,7 @@ export function SectionCard({
                 {section.name}
               </h3>
               <Badge variant="outline" className="border-border/60 text-[10px] px-1.5 py-0 sm:text-xs sm:px-2 sm:py-0.5">
-                {options.length} options
+                {options.length} {t.options}
               </Badge>
             </div>
             <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground sm:text-xs">
@@ -95,12 +97,12 @@ export function SectionCard({
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:mt-3 sm:gap-x-4 sm:text-xs">
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Users className="size-3 sm:size-3.5" />
-            {section.totalVotes.toLocaleString("en-US")} votes
+            {section.totalVotes.toLocaleString("en-US")} {t.votes}
           </span>
           {mode === "result" && section.leadingOptionName && (
             <span className={cn("inline-flex items-center gap-1 font-medium", c.text)}>
               <TrendingUp className="size-3 sm:size-3.5" />
-              Leading: {section.leadingOptionName}
+              {t.leading} {section.leadingOptionName}
               {section.leadingOptionPercentage != null && (
                 <span className="tabular-nums opacity-80">
                   ({section.leadingOptionPercentage.toFixed(1)}%)
@@ -135,14 +137,10 @@ export function SectionCard({
               c.text && isExpanded && cn("border-current/30", c.text)
             )}
           >
-            <motion.span
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="inline-flex"
-            >
+            <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="inline-flex">
               <ChevronDown className="size-3.5" />
             </motion.span>
-            {isExpanded ? "Show less" : `Show ${hiddenCount} more`}
+            {isExpanded ? t.showLess : t.showMore(hiddenCount)}
           </button>
         )}
 

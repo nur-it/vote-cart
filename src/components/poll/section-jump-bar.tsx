@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { SectionIcon } from "./icon-map";
 import { SECTION_COLORS } from "@/lib/types";
 import type { SectionResult } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 interface Props {
   sections: SectionResult[];
@@ -52,6 +53,7 @@ function useJumpTo(sectionRefs: Props["sectionRefs"]) {
 export function SectionSidebar({ sections, sectionRefs, hidden }: Props) {
   const activeId = useActiveSection(sections, sectionRefs);
   const jumpTo = useJumpTo(sectionRefs);
+  const { t } = useLang();
 
   if (hidden) return null;
 
@@ -59,7 +61,7 @@ export function SectionSidebar({ sections, sectionRefs, hidden }: Props) {
     <aside className="hidden xl:flex xl:flex-col xl:w-44 xl:shrink-0">
       <div className="sticky top-35 flex flex-col gap-1">
         <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Sections
+          {t.sections}
         </p>
         {sections.map((s) => {
           const c = SECTION_COLORS[s.color];

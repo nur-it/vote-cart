@@ -16,6 +16,8 @@ model Section {
   slug        String   @unique
   name        String
   description String
+  name_i18n   Json     @default("{}")
+  desc_i18n   Json     @default("{}")
   icon        String // lucide icon name
   color       String // tailwind color token: rose | amber | emerald | ...
   order       Int      @default(0)
@@ -34,6 +36,8 @@ model Option {
   name        String
   emoji       String
   description String
+  name_i18n   Json     @default("{}")
+  desc_i18n   Json     @default("{}")
   votes       Int      @default(0)
   order       Int      @default(0)
   isCustom    Boolean  @default(false) // true = added by a voter

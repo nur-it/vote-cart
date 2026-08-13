@@ -20,13 +20,14 @@ export async function POST(request: Request) {
   const headersList = await headers();
   const ip = getIp(headersList);
   const ipHash = hashIp(ip);
+  const { searchParams } = new URL(request.url);
+  const lang = (searchParams.get("lang") ?? "en") as "en" | "ru";
 
   const cookieStore = await cookies();
 
   // Check DB first — IP already voted?
   const existingVote = await getVoteByIp(ipHash);
   if (existingVote) {
-    // Sync cookie if missing (e.g. different browser on same network)
     if (!cookieStore.get(VOTE_COOKIE)?.value) {
       cookieStore.set(VOTE_COOKIE, JSON.stringify(existingVote.optionIds), {
         httpOnly: true,
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
         path: "/",
       });
     }
-    const result = await computeResults(existingVote.optionIds);
+    const result = await computeResults(existingVote.optionIds, lang);
     return NextResponse.json({
       ...result,
       alreadyVoted: true,
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   const res = await castVote(optionIds, ipHash);
   if (!res.ok) {
     if (res.reason === "already_voted") {
-      const result = await computeResults(optionIds);
+      const result = await computeResults(optionIds, lang);
       return NextResponse.json({ ...result, alreadyVoted: true }, { status: 200 });
     }
     return NextResponse.json({ error: res.reason }, { status: 400 });
@@ -77,6 +78,6 @@ export async function POST(request: Request) {
     path: "/",
   });
 
-  const result = await computeResults(optionIds);
+  const result = await computeResults(optionIds, lang);
   return NextResponse.json({ ...result, alreadyVoted: false, votedAt: Date.now() });
 }

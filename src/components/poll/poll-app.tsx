@@ -14,9 +14,10 @@ import { PollHeader } from "./poll-header";
 import { PollToolbar, type SortKey, type ViewMode } from "./poll-toolbar";
 import { SectionCard } from "./section-card";
 import { SectionSidebar, SectionPills } from "./section-jump-bar";
+import { useLang } from "@/lib/i18n";
 
-async function fetchPoll(): Promise<PollResult> {
-  const res = await fetch("/api/poll", { cache: "no-store" });
+async function fetchPoll(lang: string): Promise<PollResult> {
+  const res = await fetch(`/api/poll?lang=${lang}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load poll");
   return res.json();
 }
@@ -24,6 +25,7 @@ async function fetchPoll(): Promise<PollResult> {
 export function PollApp() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { lang, t } = useLang();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -47,14 +49,14 @@ export function PollApp() {
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["poll"],
-    queryFn: fetchPoll,
+    queryKey: ["poll", lang],
+    queryFn: () => fetchPoll(lang),
     refetchOnWindowFocus: true,
   });
 
   const voteMutation = useMutation({
     mutationFn: async (optionIds: string[]) => {
-      const res = await fetch("/api/poll/vote", {
+      const res = await fetch(`/api/poll/vote?lang=${lang}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ optionIds }),
@@ -66,28 +68,23 @@ export function PollApp() {
       return res.json() as Promise<PollResult>;
     },
     onSuccess: (result) => {
-      queryClient.setQueryData(["poll"], result);
+      queryClient.setQueryData(["poll", lang], result);
       localStorage.setItem("poll_has_voted", "true");
       setLocalHasVoted(true);
       const ts = Date.now();
       localStorage.setItem("poll_vote_timestamp", String(ts));
       setVoteTimestamp(ts);
       toast({
-        title: "Vote recorded! 🎉",
-        description: `You supported ${selected.size} categor${selected.size === 1 ? "y" : "ies"}. Watch the bars fill up live.`,
+        title: t.toastVoteTitle,
+        description: t.toastVoteDesc(selected.size),
       });
       setSelected(new Set());
-      // jump to results
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     },
     onError: (err: Error) => {
-      toast({
-        title: "Couldn't submit your vote",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: t.toastVoteError, description: err.message, variant: "destructive" });
     },
   });
 
@@ -101,15 +98,15 @@ export function PollApp() {
       return res.json() as Promise<PollResult>;
     },
     onSuccess: (result) => {
-      queryClient.setQueryData(["poll"], result);
+      queryClient.setQueryData(["poll", lang], result);
       localStorage.removeItem("poll_has_voted");
       localStorage.removeItem("poll_vote_timestamp");
       setLocalHasVoted(false);
       setVoteTimestamp(null);
-      toast({ title: "Vote undone", description: "You can now cast a new vote." });
+      toast({ title: t.toastUndoTitle, description: t.toastUndoDesc });
     },
     onError: (err: Error) => {
-      toast({ title: "Couldn't undo", description: err.message, variant: "destructive" });
+      toast({ title: t.toastUndoError, description: err.message, variant: "destructive" });
     },
   });
 
@@ -130,7 +127,7 @@ export function PollApp() {
 
   const addOptionMutation = useMutation({
     mutationFn: async (vars: { sectionId: string; name: string }) => {
-      const res = await fetch("/api/poll/option", {
+      const res = await fetch(`/api/poll/option?lang=${lang}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(vars),
@@ -142,14 +139,11 @@ export function PollApp() {
       return res.json() as Promise<AddOptionResponse>;
     },
     onSuccess: (result, vars) => {
-      queryClient.setQueryData(["poll"], result.poll);
-      // Save to localStorage when custom option is successfully added!
+      queryClient.setQueryData(["poll", lang], result.poll);
       if (result.option.created) {
         localStorage.setItem("poll_added_custom_option", "true");
         setHasAddedCustomOption(true);
       }
-      // In select mode, auto-tick the freshly added option so the user's
-      // personal choice is included in their next vote.
       if (!result.poll.hasVoted) {
         setSelected((prev) => {
           const next = new Set(prev);
@@ -157,28 +151,18 @@ export function PollApp() {
           return next;
         });
       }
-      const sectionName =
-        result.poll.sections.find((s) => s.id === vars.sectionId)?.name ??
-        "this category";
+      const sectionName = result.poll.sections.find((s) => s.id === vars.sectionId)?.name ?? "this category";
       toast({
         title: result.option.created
-          ? `Added "${result.option.name}"! ✨`
-          : `"${result.option.name}" is already in ${sectionName}`,
+          ? t.toastAddedTitle(result.option.name)
+          : t.toastExistsTitle(result.option.name, sectionName),
         description: result.option.created
-          ? `It's now live in ${sectionName} — ${
-              result.poll.hasVoted
-                ? "others can vote on it too."
-                : "we've selected it for your vote."
-            }`
-          : "We selected the existing one for you instead.",
+          ? t.toastAddedDescPre(sectionName, result.poll.hasVoted ? t.toastAddedDescVoted : t.toastAddedDescNotVoted)
+          : t.toastAddedDescExisting,
       });
     },
     onError: (err: Error) => {
-      toast({
-        title: "Couldn't add that option",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: t.toastAddError, description: err.message, variant: "destructive" });
     },
   });
 
@@ -308,17 +292,16 @@ export function PollApp() {
               resultCount={totalResultsShown}
             />
 
-            {/* Status banner */}
             {mode === "result" && !hasVoted && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 sm:px-4 sm:py-2.5 sm:text-sm">
-                👀 Live results preview — cast your vote to lock in your picks.
+                {t.bannerPreview}
               </div>
             )}
             {mode === "select" && (
               <div className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground sm:px-4 sm:py-2.5 sm:text-sm">
-                ✅ Select the categories you shop for, then tap{" "}
-                <span className="font-semibold text-foreground">Cast vote</span>{" "}
-                to reveal live percentages.
+                {t.bannerSelect}{" "}
+                <span className="font-semibold text-foreground">{t.bannerSelectBold}</span>{" "}
+                {t.bannerSelectEnd}
               </div>
             )}
 
@@ -370,8 +353,7 @@ export function PollApp() {
 
             {processedSections.length === 0 && (
               <div className="rounded-xl border border-dashed py-16 text-center text-muted-foreground">
-                No categories match &ldquo;{search}&rdquo;. Try a different
-                keyword.
+                {t.noMatch(search)}
               </div>
             )}
 
@@ -425,16 +407,12 @@ function LoadingState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLang();
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-      <p className="text-sm text-muted-foreground">
-        We couldn&apos;t load the poll. Please try again.
-      </p>
-      <button
-        onClick={onRetry}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-      >
-        Retry
+      <p className="text-sm text-muted-foreground">{t.errorLoad}</p>
+      <button onClick={onRetry} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        {t.retry}
       </button>
     </div>
   );

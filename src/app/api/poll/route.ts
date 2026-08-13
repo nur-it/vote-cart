@@ -14,7 +14,9 @@ function getIp(headersList: Awaited<ReturnType<typeof headers>>): string {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const lang = (searchParams.get("lang") ?? "en") as "en" | "ru";
   const headersList = await headers();
   const ip = getIp(headersList);
   const ipHash = hashIp(ip);
@@ -24,7 +26,7 @@ export async function GET() {
   // DB is source of truth for IP-based dedup
   const existingVote = await getVoteByIp(ipHash);
   if (existingVote) {
-    const result = await computeResults(existingVote.optionIds);
+    const result = await computeResults(existingVote.optionIds, lang);
     return NextResponse.json({ ...result, votedAt: new Date(existingVote.createdAt).getTime() });
   }
 
@@ -40,6 +42,6 @@ export async function GET() {
     votedOptionIds = [];
   }
 
-  const result = await computeResults(votedOptionIds);
+  const result = await computeResults(votedOptionIds, lang);
   return NextResponse.json(result);
 }
