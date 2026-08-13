@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { config } from "dotenv";
+import { SEED_SECTIONS } from "../src/lib/poll-data";
 
 config({ path: ".env" });
-import { SEED_SECTIONS } from "../src/lib/poll-data";
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "" }),
@@ -23,6 +23,8 @@ async function main() {
         slug: s.slug,
         name: s.name,
         description: s.description,
+        name_i18n: { en: s.name_en, ru: s.name_ru },
+        desc_i18n: { en: s.desc_en, ru: s.desc_ru },
         icon: s.icon,
         color: s.color,
         order: i,
@@ -36,6 +38,8 @@ async function main() {
         name: opt.name,
         emoji: opt.emoji,
         description: opt.description,
+        name_i18n: { en: opt.name_en, ru: opt.name_ru },
+        desc_i18n: { en: opt.desc_en, ru: opt.desc_ru },
         votes: 0,
         order: j,
       })),

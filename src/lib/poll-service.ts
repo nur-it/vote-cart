@@ -3,12 +3,20 @@ import { db } from "./db";
 import { SEED_SECTIONS } from "./poll-data";
 import type { OptionResult, PollResult, SectionColor, SectionResult } from "./types";
 
-// Hash IP so raw IPs are never stored
+export type Lang = "en" | "ru";
+
+function resolveI18n(json: unknown, lang: Lang): string {
+  if (json && typeof json === "object") {
+    const map = json as Record<string, string>;
+    return map[lang] ?? map["en"] ?? "";
+  }
+  return "";
+}
+
 export function hashIp(ip: string): string {
   return createHash("sha256").update(ip).digest("hex");
 }
 
-// Seed only sections + options (no fake votes, no fake voters)
 export async function ensureSeeded(): Promise<void> {
   const sectionCount = await db.section.count();
   if (sectionCount > 0) return;
@@ -20,6 +28,8 @@ export async function ensureSeeded(): Promise<void> {
         slug: section.slug,
         name: section.name,
         description: section.description,
+        name_i18n: { en: section.name_en, ru: section.name_ru },
+        desc_i18n: { en: section.desc_en, ru: section.desc_ru },
         icon: section.icon,
         color: section.color,
         order: s,
@@ -33,6 +43,8 @@ export async function ensureSeeded(): Promise<void> {
         name: opt.name,
         emoji: opt.emoji,
         description: opt.description,
+        name_i18n: { en: opt.name_en, ru: opt.name_ru },
+        desc_i18n: { en: opt.desc_en, ru: opt.desc_ru },
         votes: 0,
         order: i,
       })),
@@ -40,7 +52,7 @@ export async function ensureSeeded(): Promise<void> {
   }
 }
 
-export async function computeResults(votedOptionIds: string[] = []): Promise<PollResult> {
+export async function computeResults(votedOptionIds: string[] = [], lang: Lang = "en"): Promise<PollResult> {
   await ensureSeeded();
 
   const sections = await db.section.findMany({
@@ -61,13 +73,16 @@ export async function computeResults(votedOptionIds: string[] = []): Promise<Pol
     const rankMap = new Map(sorted.map((o, i) => [o.id, i + 1]));
     const leading = sorted[0] ?? null;
 
+    const sectionName = resolveI18n(s.name_i18n, lang) || s.name;
+    const sectionDesc = resolveI18n(s.desc_i18n, lang) || s.description;
+
     const options: OptionResult[] = s.options.map((o) => ({
       id: o.id,
       sectionId: s.id,
       slug: o.slug,
-      name: o.name,
+      name: resolveI18n(o.name_i18n, lang) || o.name,
       emoji: o.emoji,
-      description: o.description,
+      description: resolveI18n(o.desc_i18n, lang) || o.description,
       votes: o.votes,
       percentage: sectionTotal > 0 ? Math.round((o.votes / sectionTotal) * 1000) / 10 : 0,
       rank: rankMap.get(o.id) ?? 0,
@@ -80,14 +95,14 @@ export async function computeResults(votedOptionIds: string[] = []): Promise<Pol
     return {
       id: s.id,
       slug: s.slug,
-      name: s.name,
-      description: s.description,
+      name: sectionName,
+      description: sectionDesc,
       icon: s.icon,
       color: s.color as SectionColor,
       order: s.order,
       options,
       totalVotes: sectionTotal,
-      leadingOptionName: leading ? leading.name : null,
+      leadingOptionName: leading ? (resolveI18n(leading.name_i18n, lang) || leading.name) : null,
       leadingOptionPercentage:
         leading && sectionTotal > 0
           ? Math.round((leading.votes / sectionTotal) * 1000) / 10
@@ -114,7 +129,6 @@ export async function computeResults(votedOptionIds: string[] = []): Promise<Pol
   };
 }
 
-// Returns existing vote record for this IP hash, or null
 export async function getVoteByIp(ipHash: string) {
   return db.vote.findUnique({ where: { ip: ipHash } });
 }
@@ -135,7 +149,6 @@ export async function castVote(
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!optionIds.length) return { ok: false, reason: "No options selected" };
 
-  // IP-level dedup
   const existing = await db.vote.findUnique({ where: { ip: ipHash } });
   if (existing) return { ok: false, reason: "already_voted" };
 
@@ -173,7 +186,8 @@ export async function addCustomOption(
   sectionId: string,
   rawName: string,
   emoji: string,
-  votedOptionIds: string[] = []
+  votedOptionIds: string[] = [],
+  lang: Lang = "en"
 ): Promise<{
   option: { id: string; sectionId: string; name: string; emoji: string; isCustom: boolean; created: boolean };
   poll: PollResult;
@@ -207,6 +221,8 @@ export async function addCustomOption(
         name,
         emoji: emoji || "✨",
         description: "Community-added option.",
+        name_i18n: { en: name, ru: "" },
+        desc_i18n: { en: "Community-added option.", ru: "" },
         votes: 0,
         order: existing.length,
         isCustom: true,
@@ -215,7 +231,6 @@ export async function addCustomOption(
     option = { id: created.id, sectionId, name: created.name, emoji: created.emoji, isCustom: true, created: true };
   }
 
-  const poll = await computeResults(votedOptionIds);
+  const poll = await computeResults(votedOptionIds, lang);
   return { option, poll };
 }
-

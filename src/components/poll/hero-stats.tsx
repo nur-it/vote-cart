@@ -2,6 +2,7 @@
 
 import type { PollResult } from "@/lib/types";
 import { BarChart3, Crown, Tag, Users } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 interface HeroStatsProps {
   data: PollResult;
@@ -15,12 +16,13 @@ function compact(n: number): string {
 }
 
 export function HeroHeader({ hasVoted }: { hasVoted?: boolean }) {
+  const { t } = useLang();
   return (
     <div className="py-1">
       <h1 className="text-2xl font-extrabold tracking-tight leading-tight sm:text-4xl">
-        Which shopping categories do {hasVoted ? "people" : "you"}{" "}
+        {hasVoted ? t.heroHeadingPeople : t.heroHeadingYou}{" "}
         <span className="bg-linear-to-r from-rose-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent">
-          love most?
+          {t.heroHeadingEnd}
         </span>
       </h1>
     </div>
@@ -28,47 +30,39 @@ export function HeroHeader({ hasVoted }: { hasVoted?: boolean }) {
 }
 
 export function HeroStats({ data }: HeroStatsProps) {
+  const { t } = useLang();
   return (
     <div className="mt-6 rounded-xl border bg-card/60 px-3 py-2.5 text-xs text-muted-foreground backdrop-blur-xs sm:mt-8 sm:px-4 sm:py-3">
       <div className="flex flex-wrap items-center justify-between gap-2.5 text-center sm:text-left">
         <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start sm:gap-6">
           <div className="flex items-center gap-1.5">
             <Users className="size-3.5 text-rose-500" />
-            <span className="font-semibold text-foreground">
-              {compact(data.voterCount)}
-            </span>{" "}
-            Voters
+            <span className="font-semibold text-foreground">{compact(data.voterCount)}</span>{" "}
+            {t.voters}
           </div>
           <div className="flex items-center gap-1.5">
             <BarChart3 className="size-3.5 text-fuchsia-500" />
-            <span className="font-semibold text-foreground">
-              {compact(data.totalVotes)}
-            </span>{" "}
-            Total Votes
+            <span className="font-semibold text-foreground">{compact(data.totalVotes)}</span>{" "}
+            {t.totalVotes}
           </div>
           <div className="flex items-center gap-1.5">
             <Tag className="size-3.5 text-violet-500" />
-            <span className="font-semibold text-foreground">
-              {data.optionCount}
-            </span>{" "}
-            Categories
+            <span className="font-semibold text-foreground">{data.optionCount}</span>{" "}
+            {t.categories}
           </div>
         </div>
 
         {data.topOption && (
           <div className="flex items-center justify-center gap-1.5 font-medium sm:justify-end">
             <Crown className="size-3.5 text-amber-500" />
-            <span>Top pick:</span>
+            <span>{t.topPick}</span>
             <span className="font-bold text-foreground">
               {data.topOption.emoji} {data.topOption.name}
             </span>
-            <span className="text-[11px] opacity-80">
-              ({data.topOption.percentage.toFixed(1)}%)
-            </span>
+            <span className="text-[11px] opacity-80">({data.topOption.percentage.toFixed(1)}%)</span>
           </div>
         )}
       </div>
     </div>
   );
 }
-
