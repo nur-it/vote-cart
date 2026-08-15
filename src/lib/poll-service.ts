@@ -145,9 +145,12 @@ export async function undoVote(optionIds: string[], ipHash: string): Promise<voi
 
 export async function castVote(
   optionIds: string[],
-  ipHash: string
+  ipHash: string,
+  voter: { name: string; email: string; phone?: string }
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!optionIds.length) return { ok: false, reason: "No options selected" };
+  if (!voter.name?.trim()) return { ok: false, reason: "Name is required" };
+  if (!voter.email?.trim()) return { ok: false, reason: "Email is required" };
 
   const existing = await db.vote.findUnique({ where: { ip: ipHash } });
   if (existing) return { ok: false, reason: "already_voted" };
@@ -160,12 +163,37 @@ export async function castVote(
     return { ok: false, reason: "Some options are invalid" };
   }
 
+  const cleanEmail = voter.email.toLowerCase().trim();
+  const cleanName = voter.name.trim();
+  const cleanPhone = voter.phone?.trim() || null;
+
+  // Upsert user so repeat visits / profile changes update gracefully
+  const user = await db.user.upsert({
+    where: { email: cleanEmail },
+    update: {
+      name: cleanName,
+      ...(cleanPhone ? { phone: cleanPhone } : {}),
+    },
+    create: {
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+    },
+  });
+
   await db.$transaction([
     db.option.updateMany({
       where: { id: { in: optionIds } },
       data: { votes: { increment: 1 } },
     }),
-    db.vote.create({ data: { ip: ipHash, optionIds, optionCount: optionIds.length } }),
+    db.vote.create({
+      data: {
+        userId: user.id,
+        ip: ipHash,
+        optionIds,
+        optionCount: optionIds.length,
+      },
+    }),
   ]);
 
   return { ok: true };

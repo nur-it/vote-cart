@@ -14,6 +14,7 @@ import { PollHeader } from "./poll-header";
 import { PollToolbar, type SortKey, type ViewMode } from "./poll-toolbar";
 import { SectionCard } from "./section-card";
 import { SectionSidebar, SectionPills } from "./section-jump-bar";
+import { VoterModal } from "./voter-modal";
 import { useLang } from "@/lib/i18n";
 
 async function fetchPoll(lang: string): Promise<PollResult> {
@@ -35,6 +36,7 @@ export function PollApp() {
   const [hasAddedCustomOption, setHasAddedCustomOption] = useState(false);
   const [localHasVoted, setLocalHasVoted] = useState(false);
   const [voteTimestamp, setVoteTimestamp] = useState<number | null>(null);
+  const [isVoterModalOpen, setIsVoterModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -55,11 +57,11 @@ export function PollApp() {
   });
 
   const voteMutation = useMutation({
-    mutationFn: async (optionIds: string[]) => {
+    mutationFn: async (payload: { optionIds: string[]; name: string; email: string }) => {
       const res = await fetch(`/api/poll/vote?lang=${lang}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ optionIds }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -68,6 +70,7 @@ export function PollApp() {
       return res.json() as Promise<PollResult>;
     },
     onSuccess: (result) => {
+      setIsVoterModalOpen(false);
       queryClient.setQueryData(["poll", lang], result);
       localStorage.setItem("poll_has_voted", "true");
       setLocalHasVoted(true);
@@ -190,10 +193,22 @@ export function PollApp() {
     });
   }, [hasVoted]);
 
-  const handleVote = useCallback(() => {
+  const handleVoteClick = useCallback(() => {
     if (selected.size === 0 || hasVoted) return;
-    voteMutation.mutate([...selected]);
-  }, [selected, hasVoted, voteMutation]);
+    setIsVoterModalOpen(true);
+  }, [selected, hasVoted]);
+
+  const handleModalSubmit = useCallback(
+    (voter: { name: string; email: string }) => {
+      if (selected.size === 0 || hasVoted) return;
+      voteMutation.mutate({
+        optionIds: Array.from(selected),
+        name: voter.name,
+        email: voter.email,
+      });
+    },
+    [selected, hasVoted, voteMutation]
+  );
 
   const handleUndo = useCallback(() => {
     undoMutation.mutate();
@@ -371,9 +386,17 @@ export function PollApp() {
         voting={voteMutation.isPending}
         undoing={undoMutation.isPending}
         voteTimestamp={voteTimestamp}
-        onVote={handleVote}
+        onVote={handleVoteClick}
         onUndo={handleUndo}
         onJumpToResults={jumpToResults}
+      />
+
+      <VoterModal
+        open={isVoterModalOpen}
+        onOpenChange={setIsVoterModalOpen}
+        selectedCount={selected.size}
+        isSubmitting={voteMutation.isPending}
+        onSubmit={handleModalSubmit}
       />
     </div>
   );

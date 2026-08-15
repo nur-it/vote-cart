@@ -82,6 +82,20 @@ const ru: Locale = {
 
   // Navigation
   sections: "Разделы",
+
+  // Voter Information Modal
+  modalVoterTitle: "Завершите голосование",
+  modalVoterDesc: "Пожалуйста, введите ваше имя и email, чтобы подтвердить выбор и отправить голос.",
+  modalVoterNameLabel: "Ваше имя",
+  modalVoterNamePlaceholder: "например, Алексей Иванов",
+  modalVoterEmailLabel: "Электронная почта",
+  modalVoterEmailPlaceholder: "например, alex@example.com",
+  modalVoterSubmit: "Подтвердить",
+  modalVoterCancel: "Отмена",
+  modalVoterSelected: (n: number) => `Выбрано: ${n}`,
+  modalVoterNameError: "Пожалуйста, введите имя (не менее 2 символов).",
+  modalVoterEmailError: "Пожалуйста, введите корректный адрес email.",
+  modalVoterPrivacyNote: "🔒 Ваш email используется исключительно для защиты от накрутки голосов.",
 };
 
 export default ru;

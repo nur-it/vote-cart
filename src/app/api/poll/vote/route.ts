@@ -62,7 +62,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many options selected." }, { status: 400 });
   }
 
-  const res = await castVote(optionIds, ipHash);
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const phone = typeof body?.phone === "string" ? body.phone.trim() : undefined;
+
+  if (!name || name.length < 2) {
+    return NextResponse.json({ error: "Please provide a valid name (at least 2 characters)." }, { status: 400 });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
+  }
+
+  const res = await castVote(optionIds, ipHash, { name, email, phone });
   if (!res.ok) {
     if (res.reason === "already_voted") {
       const result = await computeResults(optionIds, lang);
