@@ -154,7 +154,7 @@ export function VoterModal({
             >
               {t.modalVoterCancel}
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="min-w-[100px] gap-2 px-5 font-semibold">
+            <Button type="submit" disabled={isSubmitting} className="min-w-25 gap-2 px-5 font-semibold">
               {isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
