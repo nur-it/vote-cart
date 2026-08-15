@@ -25,7 +25,7 @@ interface SectionCardProps {
   view: "grid" | "list";
   hasVoted: boolean;
   addingSectionId: string | null;
-  onAddOption: (sectionId: string, name: string) => void;
+  onAddOption: (sectionId: string, name: string, emoji?: string, imageUrl?: string) => void;
   hasAddedCustomOption: boolean;
   expandedBySearch?: boolean;
   sectionRef?: (el: HTMLElement | null) => void;
@@ -114,13 +114,21 @@ export function SectionCard({
       </div>
 
       {/* Options */}
-      <div className="grid gap-1.5 p-2.5 sm:gap-2 sm:p-4">
+      <div
+        className={cn(
+          "p-3 sm:p-5",
+          view === "grid"
+            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4"
+            : "flex flex-col gap-2.5 sm:gap-3"
+        )}
+      >
         {visibleOptions.map((opt) => (
           <OptionRow
             key={opt.id}
             option={opt}
             color={section.color}
             mode={mode}
+            view={view}
             isSelected={selectedIds.has(opt.id)}
             isUserPick={userPickIds.has(opt.id)}
             onToggle={onToggle}
@@ -133,7 +141,7 @@ export function SectionCard({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className={cn(
-              "flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground text-center",
+              "col-span-full flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground text-center",
               c.text && isExpanded && cn("border-current/30", c.text)
             )}
           >
@@ -145,15 +153,17 @@ export function SectionCard({
         )}
 
         {!hasVoted && (
-          <AddOptionInput
-            sectionId={section.id}
-            sectionName={section.name}
-            color={section.color}
-            isAdding={addingSectionId === section.id}
-            hasVoted={hasVoted}
-            onAdd={onAddOption}
-            hasAddedCustomOption={hasAddedCustomOption}
-          />
+          <div className="col-span-full">
+            <AddOptionInput
+              sectionId={section.id}
+              sectionName={section.name}
+              color={section.color}
+              isAdding={addingSectionId === section.id}
+              hasVoted={hasVoted}
+              onAdd={onAddOption}
+              hasAddedCustomOption={hasAddedCustomOption}
+            />
+          </div>
         )}
       </div>
     </Card>

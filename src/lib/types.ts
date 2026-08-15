@@ -156,6 +156,7 @@ export interface OptionResult {
   slug: string;
   name: string;
   emoji: string;
+  imageUrl?: string | null;
   description: string;
   votes: number;
   percentage: number; // 0-100, 1 decimal place — share of this section's votes
@@ -209,6 +210,7 @@ export interface AddOptionPayload {
   sectionId: string;
   name: string;
   emoji?: string;
+  imageUrl?: string;
 }
 
 // Returned by the "add custom option" endpoint.
@@ -218,6 +220,7 @@ export interface AddOptionResponse {
     sectionId: string;
     name: string;
     emoji: string;
+    imageUrl?: string | null;
     isCustom: boolean;
     created: boolean; // false if an existing matching option was returned
   };
