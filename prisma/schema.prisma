@@ -35,6 +35,7 @@ model Option {
   slug        String   @unique
   name        String
   emoji       String
+  imageUrl    String?
   description String
   name_i18n   Json     @default("{}")
   desc_i18n   Json     @default("{}")

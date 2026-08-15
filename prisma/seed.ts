@@ -37,6 +37,7 @@ async function main() {
         slug: opt.slug,
         name: opt.name,
         emoji: opt.emoji,
+        imageUrl: opt.imageUrl ?? null,
         description: opt.description,
         name_i18n: { en: opt.name_en, ru: opt.name_ru },
         desc_i18n: { en: opt.desc_en, ru: opt.desc_ru },

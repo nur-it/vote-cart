@@ -31,7 +31,7 @@ export function PollApp() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("section");
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("grid");
   const [showResults, setShowResults] = useState(false);
   const [hasAddedCustomOption, setHasAddedCustomOption] = useState(false);
   const [localHasVoted, setLocalHasVoted] = useState(false);
@@ -129,7 +129,7 @@ export function PollApp() {
   });
 
   const addOptionMutation = useMutation({
-    mutationFn: async (vars: { sectionId: string; name: string }) => {
+    mutationFn: async (vars: { sectionId: string; name: string; emoji?: string; imageUrl?: string }) => {
       const res = await fetch(`/api/poll/option?lang=${lang}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -219,8 +219,8 @@ export function PollApp() {
   }, []);
 
   const handleAddOption = useCallback(
-    (sectionId: string, name: string) => {
-      addOptionMutation.mutate({ sectionId, name });
+    (sectionId: string, name: string, emoji?: string, imageUrl?: string) => {
+      addOptionMutation.mutate({ sectionId, name, emoji, imageUrl });
     },
     [addOptionMutation]
   );
@@ -404,8 +404,8 @@ export function PollApp() {
 
 function cnGrid(view: ViewMode): string {
   return view === "grid"
-    ? "grid grid-cols-1 gap-4 md:grid-cols-2"
-    : "flex flex-col gap-4";
+    ? "flex flex-col gap-6 w-full"
+    : "flex flex-col gap-4 max-w-3xl mx-auto w-full";
 }
 
 function LoadingState() {

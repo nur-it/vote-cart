@@ -22,6 +22,10 @@ export async function POST(request: Request) {
     typeof body?.emoji === "string" && body.emoji.trim()
       ? body.emoji.trim().slice(0, 8)
       : "✨";
+  const imageUrl =
+    typeof body?.imageUrl === "string" && body.imageUrl.trim()
+      ? body.imageUrl.trim()
+      : undefined;
 
   if (!sectionId) {
     return NextResponse.json(
@@ -63,6 +67,7 @@ export async function POST(request: Request) {
       sectionId,
       name,
       emoji,
+      imageUrl,
       votedOptionIds
     );
     return NextResponse.json(result);

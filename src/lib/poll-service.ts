@@ -19,36 +19,49 @@ export function hashIp(ip: string): string {
 
 export async function ensureSeeded(): Promise<void> {
   const sectionCount = await db.section.count();
-  if (sectionCount > 0) return;
+  if (sectionCount === 0) {
+    for (let s = 0; s < SEED_SECTIONS.length; s++) {
+      const section = SEED_SECTIONS[s];
+      const created = await db.section.create({
+        data: {
+          slug: section.slug,
+          name: section.name,
+          description: section.description,
+          name_i18n: { en: section.name_en, ru: section.name_ru },
+          desc_i18n: { en: section.desc_en, ru: section.desc_ru },
+          icon: section.icon,
+          color: section.color,
+          order: s,
+        },
+      });
 
-  for (let s = 0; s < SEED_SECTIONS.length; s++) {
-    const section = SEED_SECTIONS[s];
-    const created = await db.section.create({
-      data: {
-        slug: section.slug,
-        name: section.name,
-        description: section.description,
-        name_i18n: { en: section.name_en, ru: section.name_ru },
-        desc_i18n: { en: section.desc_en, ru: section.desc_ru },
-        icon: section.icon,
-        color: section.color,
-        order: s,
-      },
-    });
-
-    await db.option.createMany({
-      data: section.options.map((opt, i) => ({
-        sectionId: created.id,
-        slug: opt.slug,
-        name: opt.name,
-        emoji: opt.emoji,
-        description: opt.description,
-        name_i18n: { en: opt.name_en, ru: opt.name_ru },
-        desc_i18n: { en: opt.desc_en, ru: opt.desc_ru },
-        votes: 0,
-        order: i,
-      })),
-    });
+      await db.option.createMany({
+        data: section.options.map((opt, i) => ({
+          sectionId: created.id,
+          slug: opt.slug,
+          name: opt.name,
+          emoji: opt.emoji,
+          imageUrl: opt.imageUrl ?? null,
+          description: opt.description,
+          name_i18n: { en: opt.name_en, ru: opt.name_ru },
+          desc_i18n: { en: opt.desc_en, ru: opt.desc_ru },
+          votes: 0,
+          order: i,
+        })),
+      });
+    }
+  } else {
+    // Automatically backfill imageUrl for seeded options if they were created before imageUrl existed
+    for (const section of SEED_SECTIONS) {
+      for (const opt of section.options) {
+        if (opt.imageUrl) {
+          await db.option.updateMany({
+            where: { slug: opt.slug, imageUrl: null },
+            data: { imageUrl: opt.imageUrl },
+          });
+        }
+      }
+    }
   }
 }
 
@@ -82,6 +95,7 @@ export async function computeResults(votedOptionIds: string[] = [], lang: Lang =
       slug: o.slug,
       name: resolveI18n(o.name_i18n, lang) || o.name,
       emoji: o.emoji,
+      imageUrl: o.imageUrl,
       description: resolveI18n(o.desc_i18n, lang) || o.description,
       votes: o.votes,
       percentage: sectionTotal > 0 ? Math.round((o.votes / sectionTotal) * 1000) / 10 : 0,
@@ -214,10 +228,11 @@ export async function addCustomOption(
   sectionId: string,
   rawName: string,
   emoji: string,
+  imageUrl?: string,
   votedOptionIds: string[] = [],
   lang: Lang = "en"
 ): Promise<{
-  option: { id: string; sectionId: string; name: string; emoji: string; isCustom: boolean; created: boolean };
+  option: { id: string; sectionId: string; name: string; emoji: string; imageUrl?: string | null; isCustom: boolean; created: boolean };
   poll: PollResult;
 }> {
   await ensureSeeded();
@@ -230,13 +245,13 @@ export async function addCustomOption(
 
   const existing = await db.option.findMany({
     where: { sectionId },
-    select: { id: true, name: true, emoji: true, isCustom: true },
+    select: { id: true, name: true, emoji: true, imageUrl: true, isCustom: true },
   });
   const match = existing.find((o) => o.name.toLowerCase() === name.toLowerCase());
 
   let option;
   if (match) {
-    option = { id: match.id, sectionId, name: match.name, emoji: match.emoji, isCustom: match.isCustom, created: false };
+    option = { id: match.id, sectionId, name: match.name, emoji: match.emoji, imageUrl: match.imageUrl, isCustom: match.isCustom, created: false };
   } else {
     let slug = `${toSlug(name)}-${randomSuffix()}`;
     const clash = await db.option.findUnique({ where: { slug } });
@@ -248,6 +263,7 @@ export async function addCustomOption(
         slug,
         name,
         emoji: emoji || "✨",
+        imageUrl: imageUrl?.trim() || null,
         description: "Community-added option.",
         name_i18n: { en: name, ru: "" },
         desc_i18n: { en: "Community-added option.", ru: "" },
@@ -256,7 +272,7 @@ export async function addCustomOption(
         isCustom: true,
       },
     });
-    option = { id: created.id, sectionId, name: created.name, emoji: created.emoji, isCustom: true, created: true };
+    option = { id: created.id, sectionId, name: created.name, emoji: created.emoji, imageUrl: created.imageUrl, isCustom: true, created: true };
   }
 
   const poll = await computeResults(votedOptionIds, lang);
