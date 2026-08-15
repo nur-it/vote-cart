@@ -196,6 +196,9 @@ export interface PollResult {
 
 export interface VotePayload {
   optionIds: string[];
+  name: string;
+  email: string;
+  phone?: string;
 }
 
 export interface SimulatePayload {

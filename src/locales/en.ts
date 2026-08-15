@@ -80,7 +80,27 @@ const en = {
 
   // Navigation
   sections: "Sections",
-} as const;
 
-export type Locale = typeof en;
+  // Voter Information Modal
+  modalVoterTitle: "Complete Your Vote",
+  modalVoterDesc: "Please enter your name and email to verify and submit your vote.",
+  modalVoterNameLabel: "Full Name",
+  modalVoterNamePlaceholder: "e.g. Alex Smith",
+  modalVoterEmailLabel: "Email Address",
+  modalVoterEmailPlaceholder: "e.g. alex@example.com",
+  modalVoterSubmit: "Confirm",
+  modalVoterCancel: "Cancel",
+  modalVoterSelected: (n: number) => `${n} selected`,
+  modalVoterNameError: "Please enter your full name (at least 2 characters).",
+  modalVoterEmailError: "Please enter a valid email address.",
+  modalVoterPrivacyNote: "🔒 Your email will only be used for poll verification.",
+};
+
+type DeepStringify<T> = {
+  [K in keyof T]: T[K] extends (...args: infer A) => unknown
+    ? (...args: A) => string
+    : string;
+};
+
+export type Locale = DeepStringify<typeof en>;
 export default en;
