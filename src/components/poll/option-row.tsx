@@ -44,7 +44,7 @@ function OptionImage({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-gradient-to-br from-muted/60 via-muted/30 to-background text-2xl select-none",
+          "flex items-center justify-center bg-linear-to-br from-muted/60 via-muted/30 to-background text-2xl select-none",
           fallbackClassName
         )}
         aria-hidden
@@ -97,7 +97,7 @@ export function OptionRow({
           )}
         >
           {/* Card Top Image */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/40 border-b border-border/40">
+          <div className="relative aspect-4/3 w-full overflow-hidden bg-muted/40 border-b border-border/40">
             <OptionImage
               imageUrl={option.imageUrl}
               emoji={option.emoji}
@@ -107,7 +107,7 @@ export function OptionRow({
             />
 
             {/* Subtle overlay gradient */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20" />
 
             {/* Checkbox overlay badge */}
             <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-lg backdrop-blur-md bg-background/85 px-2 py-1 shadow-sm border border-border/40">
@@ -180,7 +180,7 @@ export function OptionRow({
         )}
       >
         {/* Top Image */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/40 border-b border-border/40">
+        <div className="relative aspect-4/3 w-full overflow-hidden bg-muted/40 border-b border-border/40">
           <OptionImage
             imageUrl={option.imageUrl}
             emoji={option.emoji}
@@ -189,7 +189,7 @@ export function OptionRow({
             fallbackClassName="h-full w-full"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-black/20" />
 
           {/* Leading / Crown badge */}
           {option.isLeading && (
