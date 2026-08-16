@@ -17,7 +17,11 @@ export function hashIp(ip: string): string {
   return createHash("sha256").update(ip).digest("hex");
 }
 
+let isSeededInMemory = false;
+
 export async function ensureSeeded(): Promise<void> {
+  if (isSeededInMemory) return;
+
   const sectionCount = await db.section.count();
   if (sectionCount === 0) {
     for (let s = 0; s < SEED_SECTIONS.length; s++) {
@@ -50,35 +54,26 @@ export async function ensureSeeded(): Promise<void> {
         })),
       });
     }
-  } else {
-    // Automatically backfill imageUrl for seeded options if they were created before imageUrl existed
-    for (const section of SEED_SECTIONS) {
-      for (const opt of section.options) {
-        if (opt.imageUrl) {
-          await db.option.updateMany({
-            where: { slug: opt.slug, imageUrl: null },
-            data: { imageUrl: opt.imageUrl },
-          });
-        }
-      }
-    }
   }
+
+  isSeededInMemory = true;
 }
 
 export async function computeResults(votedOptionIds: string[] = [], lang: Lang = "en"): Promise<PollResult> {
   await ensureSeeded();
 
-  const sections = await db.section.findMany({
-    orderBy: { order: "asc" },
-    include: { options: { orderBy: { order: "asc" } } },
-  });
+  const [sections, voterCount] = await Promise.all([
+    db.section.findMany({
+      orderBy: { order: "asc" },
+      include: { options: { orderBy: { order: "asc" } } },
+    }),
+    db.vote.count(),
+  ]);
 
   const totalVotes = sections.reduce(
     (sum, s) => sum + s.options.reduce((a, o) => a + o.votes, 0),
     0
   );
-
-  const voterCount = await db.vote.count();
 
   const sectionResults: SectionResult[] = sections.map((s) => {
     const sectionTotal = s.options.reduce((a, o) => a + o.votes, 0);

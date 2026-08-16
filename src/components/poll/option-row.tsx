@@ -85,19 +85,27 @@ export function OptionRow({
   if (view === "grid") {
     if (mode === "select") {
       return (
-        <motion.label
+        <motion.div
           layout
+          role="button"
+          tabIndex={0}
           onClick={() => onToggle(option.id)}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              onToggle(option.id);
+            }
+          }}
           className={cn(
             "group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card cursor-pointer transition-all duration-300 select-none",
-            "hover:shadow-lg hover:-translate-y-0.5 has-focus-visible:ring-2 has-focus-visible:ring-ring/50",
+            "hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             isSelected
               ? cn(c.border, c.bg, "shadow-md ring-2 ring-offset-1 ring-offset-background", c.ring)
               : "border-border/70 hover:border-border"
           )}
         >
           {/* Card Top Image */}
-          <div className="relative aspect-4/3 w-full overflow-hidden bg-muted/40 border-b border-border/40">
+          <div className="relative aspect-square w-full overflow-hidden bg-muted/40 border-b border-border/40">
             <OptionImage
               imageUrl={option.imageUrl}
               emoji={option.emoji}
@@ -110,10 +118,10 @@ export function OptionRow({
             <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20" />
 
             {/* Checkbox overlay badge */}
-            <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-lg backdrop-blur-md bg-background/85 px-2 py-1 shadow-sm border border-border/40">
+            <div className="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-lg backdrop-blur-md bg-background/85 px-2 py-1 shadow-sm border border-border/40">
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={() => onToggle(option.id)}
+                tabIndex={-1}
                 aria-label={`Vote for ${option.name}`}
                 className={cn(isSelected && "border-transparent", "size-4 shrink-0")}
               />
@@ -164,7 +172,7 @@ export function OptionRow({
               </span>
             </div>
           </div>
-        </motion.label>
+        </motion.div>
       );
     }
 
@@ -180,7 +188,7 @@ export function OptionRow({
         )}
       >
         {/* Top Image */}
-        <div className="relative aspect-4/3 w-full overflow-hidden bg-muted/40 border-b border-border/40">
+        <div className="relative aspect-square w-full overflow-hidden bg-muted/40 border-b border-border/40">
           <OptionImage
             imageUrl={option.imageUrl}
             emoji={option.emoji}
@@ -198,51 +206,54 @@ export function OptionRow({
             </Badge>
           )}
 
-          {/* User Pick Badge */}
-          {isUserPick && (
-            <Badge variant="secondary" className={cn("absolute right-2.5 top-2.5 gap-1 backdrop-blur-md bg-background/90 text-xs font-semibold shadow-xs", c.text)}>
-              <Vote className="size-3" /> {t.yourPick}
+          {option.isCustom && (
+            <Badge
+              variant="outline"
+              className="absolute right-2.5 top-2.5 gap-1 border-amber-500/50 bg-amber-500/90 text-amber-950 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-semibold shadow-xs"
+            >
+              <Sparkles className="size-2.5" /> {t.custom}
             </Badge>
           )}
 
-          {/* Big percentage overlay over image bottom */}
-          <div className="absolute right-2.5 bottom-2 text-right">
-            <span className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-white drop-shadow-md">
-              {option.percentage.toFixed(1)}%
-            </span>
-          </div>
+          {isUserPick && (
+            <div className="absolute right-2.5 top-2.5">
+              <Badge variant="secondary" className={cn("gap-1 text-xs font-medium shadow-sm", c.bg, c.text)}>
+                <Vote className="size-3" /> {t.yourPick}
+              </Badge>
+            </div>
+          )}
 
+          {/* Emoji */}
           <div className="absolute left-2.5 bottom-2 flex items-center justify-center size-7 rounded-full bg-background/90 backdrop-blur-md shadow-sm border border-border/30 text-sm">
             {option.emoji}
           </div>
+
+          <div className="absolute right-2.5 bottom-2 rounded-lg bg-black/75 px-2 py-0.5 backdrop-blur-md border border-white/10">
+            <span className="text-xs font-bold text-white tabular-nums">
+              {option.percentage.toFixed(1)}%
+            </span>
+          </div>
         </div>
 
-        {/* Card Body */}
+        {/* Body */}
         <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-4">
           <div>
-            <div className="flex items-center gap-1.5">
-              <h4 className="font-semibold text-sm sm:text-base leading-snug tracking-tight text-foreground line-clamp-1">
+            <div className="flex items-start justify-between gap-1.5">
+              <h4 className="font-semibold text-sm sm:text-base leading-snug tracking-tight text-foreground line-clamp-2">
                 {option.name}
               </h4>
-              {option.isCustom && (
-                <Badge variant="outline" className="shrink-0 gap-0.5 border-amber-500/40 bg-amber-500/10 px-1 py-0 text-[9px] font-medium text-amber-600 dark:text-amber-400">
-                  <Sparkles className="size-2" /> {t.custom}
-                </Badge>
-              )}
             </div>
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {option.description}
             </p>
           </div>
 
-          <div className="mt-3.5 space-y-1.5 border-t border-border/40 pt-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground text-[11px]">{formatVotes(option.votes)} {t.votes}</span>
-              <span className={cn("font-bold tabular-nums", option.isLeading ? c.text : "text-foreground")}>
-                {option.percentage.toFixed(1)}%
-              </span>
+          <div className="mt-3 space-y-1.5 border-t border-border/40 pt-2.5">
+            <Progress value={option.percentage} indicatorClassName={indicatorClass} className="h-2" />
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{formatVotes(option.votes)} {t.votes}</span>
+              <span className="font-medium text-foreground">{option.percentage.toFixed(1)}%</span>
             </div>
-            <Progress value={option.percentage} indicatorClassName={indicatorClass} className="h-2 sm:h-2.5" />
           </div>
         </div>
       </motion.div>
@@ -254,20 +265,31 @@ export function OptionRow({
   // -------------------------------------------------------------
   if (mode === "select") {
     return (
-      <motion.label
+      <motion.div
         layout
+        role="button"
+        tabIndex={0}
+        onClick={() => onToggle(option.id)}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            onToggle(option.id);
+          }
+        }}
         className={cn(
           "group relative flex w-full cursor-pointer items-center gap-3 rounded-2xl border p-2.5 transition-all duration-200 sm:gap-4 sm:p-3.5 select-none",
-          "hover:shadow-sm has-focus-visible:ring-2 has-focus-visible:ring-ring/50",
+          "hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
           isSelected ? cn(c.border, c.bg, "shadow-xs ring-1", c.ring) : "border-border bg-card hover:bg-accent/40"
         )}
       >
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => onToggle(option.id)}
-          aria-label={`Vote for ${option.name}`}
-          className={cn(isSelected && "border-transparent", "shrink-0 size-4 sm:size-5")}
-        />
+        <div className="pointer-events-none shrink-0">
+          <Checkbox
+            checked={isSelected}
+            tabIndex={-1}
+            aria-label={`Vote for ${option.name}`}
+            className={cn(isSelected && "border-transparent", "size-4 sm:size-5")}
+          />
+        </div>
 
         {/* Thumbnail */}
         <div className="relative size-14 sm:size-18 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/40">
@@ -298,7 +320,7 @@ export function OptionRow({
             <Check className="size-3" /> {t.picked}
           </Badge>
         )}
-      </motion.label>
+      </motion.div>
     );
   }
 
