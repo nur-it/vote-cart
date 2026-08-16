@@ -312,13 +312,7 @@ export function PollApp() {
                 {t.bannerPreview}
               </div>
             )}
-            {mode === "select" && (
-              <div className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground sm:px-4 sm:py-2.5 sm:text-sm">
-                {t.bannerSelect}{" "}
-                <span className="font-semibold text-foreground">{t.bannerSelectBold}</span>{" "}
-                {t.bannerSelectEnd}
-              </div>
-            )}
+
 
             {/* Section jump pills — mobile/tablet only */}
             {processedSections.length > 0 && (
