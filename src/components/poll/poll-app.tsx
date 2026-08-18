@@ -3,10 +3,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { AddOptionResponse, PollResult } from "@/lib/types";
+import type { AddOptionResponse, OptionResult, PollResult, SectionColor } from "@/lib/types";
+import { getOrCreateGuestId } from "@/lib/guest";
 import { FloatingVoteBar } from "./floating-vote-bar";
 import { HeroHeader, HeroStats } from "./hero-stats";
 import { PollFooter } from "./poll-footer";
@@ -14,6 +26,7 @@ import { PollHeader } from "./poll-header";
 import { PollToolbar, type SortKey, type ViewMode } from "./poll-toolbar";
 import { SectionCard } from "./section-card";
 import { SectionSidebar, SectionPills } from "./section-jump-bar";
+import { SuggestProductModal } from "./suggest-product-modal";
 import { VoterModal } from "./voter-modal";
 import { useLang } from "@/lib/i18n";
 
@@ -33,14 +46,24 @@ export function PollApp() {
   const [sort, setSort] = useState<SortKey>("section");
   const [view, setView] = useState<ViewMode>("grid");
   const [showResults, setShowResults] = useState(false);
-  const [hasAddedCustomOption, setHasAddedCustomOption] = useState(false);
   const [localHasVoted, setLocalHasVoted] = useState(false);
   const [voteTimestamp, setVoteTimestamp] = useState<number | null>(null);
   const [isVoterModalOpen, setIsVoterModalOpen] = useState(false);
+  const [guestId, setGuestId] = useState("");
+
+  // Suggest / Edit product modal state
+  const [isSuggestModalOpen, setIsSuggestModalOpen] = useState(false);
+  const [suggestSectionId, setSuggestSectionId] = useState("");
+  const [suggestSectionName, setSuggestSectionName] = useState("");
+  const [suggestColor, setSuggestColor] = useState<SectionColor>("rose");
+  const [editingOption, setEditingOption] = useState<OptionResult | null>(null);
+  const [deletingOption, setDeletingOption] = useState<OptionResult | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setHasAddedCustomOption(localStorage.getItem("poll_added_custom_option") === "true");
+      const gid = getOrCreateGuestId();
+      setGuestId(gid);
+
       setLocalHasVoted(localStorage.getItem("poll_has_voted") === "true");
       const ts = localStorage.getItem("poll_vote_timestamp");
       if (ts) setVoteTimestamp(Number(ts));
@@ -60,7 +83,7 @@ export function PollApp() {
     mutationFn: async (payload: { optionIds: string[]; name: string; email: string }) => {
       const res = await fetch(`/api/poll/vote?lang=${lang}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-guest-id": guestId },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -93,7 +116,10 @@ export function PollApp() {
 
   const undoMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/poll/vote/undo", { method: "POST" });
+      const res = await fetch("/api/poll/vote/undo", {
+        method: "POST",
+        headers: { "x-guest-id": guestId },
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error ?? "Failed to undo");
@@ -113,40 +139,31 @@ export function PollApp() {
     },
   });
 
-  const resetMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/poll/reset", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to reset");
-      return res.json() as Promise<PollResult>;
-    },
-    onSuccess: (result) => {
-      queryClient.setQueryData(["poll"], result);
-      toast({
-        title: "Vote reset",
-        description: "You can vote again. Your previous votes stay in the totals.",
-      });
-    },
-  });
-
   const addOptionMutation = useMutation({
-    mutationFn: async (vars: { sectionId: string; name: string; emoji?: string; imageUrl?: string }) => {
+    mutationFn: async (vars: {
+      sectionId: string;
+      name: string;
+      description?: string;
+      emoji?: string;
+      imageUrl?: string;
+    }) => {
       const res = await fetch(`/api/poll/option?lang=${lang}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-guest-id": guestId },
         body: JSON.stringify(vars),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error ?? "Failed to add option");
+        throw new Error(err?.error ?? "Failed to add product");
       }
       return res.json() as Promise<AddOptionResponse>;
     },
     onSuccess: (result, vars) => {
       queryClient.setQueryData(["poll", lang], result.poll);
-      if (result.option.created) {
-        localStorage.setItem("poll_added_custom_option", "true");
-        setHasAddedCustomOption(true);
-      }
+      setIsSuggestModalOpen(false);
+      setEditingOption(null);
+
+      // Auto-select newly added option if voter hasn't locked in their vote
       if (!result.poll.hasVoted) {
         setSelected((prev) => {
           const next = new Set(prev);
@@ -154,13 +171,19 @@ export function PollApp() {
           return next;
         });
       }
-      const sectionName = result.poll.sections.find((s) => s.id === vars.sectionId)?.name ?? "this category";
+
+      const sectionName =
+        result.poll.sections.find((s) => s.id === vars.sectionId)?.name ?? "this category";
+
       toast({
         title: result.option.created
           ? t.toastAddedTitle(result.option.name)
           : t.toastExistsTitle(result.option.name, sectionName),
         description: result.option.created
-          ? t.toastAddedDescPre(sectionName, result.poll.hasVoted ? t.toastAddedDescVoted : t.toastAddedDescNotVoted)
+          ? t.toastAddedDescPre(
+              sectionName,
+              result.poll.hasVoted ? t.toastAddedDescVoted : t.toastAddedDescNotVoted
+            )
           : t.toastAddedDescExisting,
       });
     },
@@ -169,29 +192,96 @@ export function PollApp() {
     },
   });
 
+  const editOptionMutation = useMutation({
+    mutationFn: async (vars: {
+      optionId: string;
+      name: string;
+      description?: string;
+      emoji?: string;
+      imageUrl?: string;
+    }) => {
+      const res = await fetch(`/api/poll/option?lang=${lang}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-guest-id": guestId },
+        body: JSON.stringify(vars),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error ?? "Failed to update product");
+      }
+      return res.json() as Promise<{ option: OptionResult; poll: PollResult }>;
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(["poll", lang], result.poll);
+      setIsSuggestModalOpen(false);
+      setEditingOption(null);
+      toast({
+        title: t.toastUpdatedTitle(result.option.name),
+        description: t.toastUpdatedDesc,
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update product", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteOptionMutation = useMutation({
+    mutationFn: async (optionId: string) => {
+      const res = await fetch(`/api/poll/option?lang=${lang}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-guest-id": guestId },
+        body: JSON.stringify({ optionId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error ?? "Failed to delete product");
+      }
+      return res.json() as Promise<{ success: boolean; poll: PollResult }>;
+    },
+    onSuccess: (result, optionId) => {
+      queryClient.setQueryData(["poll", lang], result.poll);
+      setDeletingOption(null);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(optionId);
+        return next;
+      });
+      toast({
+        title: t.toastDeletedTitle,
+        description: t.toastDeletedDesc,
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to delete product", description: err.message, variant: "destructive" });
+    },
+  });
+
   const hasVoted = !!data?.hasVoted || localHasVoted;
 
-  // Sync voteTimestamp from server (handles new browser / no localStorage)
   useEffect(() => {
     if (data?.votedAt && !voteTimestamp) {
       setVoteTimestamp(data.votedAt);
     }
   }, [data?.votedAt, voteTimestamp]);
+
   const mode: "select" | "result" = hasVoted || showResults ? "result" : "select";
   const userPickIds = useMemo(
     () => new Set(data?.votedOptionIds ?? []),
     [data?.votedOptionIds]
   );
 
-  const toggleOption = useCallback((id: string) => {
-    if (hasVoted) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, [hasVoted]);
+  const toggleOption = useCallback(
+    (id: string) => {
+      if (hasVoted) return;
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [hasVoted]
+  );
 
   const handleVoteClick = useCallback(() => {
     if (selected.size === 0 || hasVoted) return;
@@ -214,15 +304,61 @@ export function PollApp() {
     undoMutation.mutate();
   }, [undoMutation]);
 
-  const handleReset = useCallback(() => {
-    // Reset is disabled — once voted, it's permanent
-  }, []);
-
-  const handleAddOption = useCallback(
-    (sectionId: string, name: string, emoji?: string, imageUrl?: string) => {
-      addOptionMutation.mutate({ sectionId, name, emoji, imageUrl });
+  const handleOpenSuggestModal = useCallback(
+    (sectionId: string, sectionName: string, color: SectionColor) => {
+      setSuggestSectionId(sectionId);
+      setSuggestSectionName(sectionName);
+      setSuggestColor(color);
+      setEditingOption(null);
+      setIsSuggestModalOpen(true);
     },
-    [addOptionMutation]
+    []
+  );
+
+  const handleEditOption = useCallback((option: OptionResult) => {
+    const parentSection = data?.sections.find((s) => s.id === option.sectionId);
+    setSuggestSectionId(option.sectionId);
+    setSuggestSectionName(parentSection?.name || "Category");
+    setSuggestColor(parentSection?.color || "rose");
+    setEditingOption(option);
+    setIsSuggestModalOpen(true);
+  }, [data]);
+
+  const handleDeleteOption = useCallback(
+    (option: OptionResult) => {
+      setDeletingOption(option);
+    },
+    []
+  );
+
+  const handleSuggestSubmit = useCallback(
+    (formData: {
+      sectionId: string;
+      optionId?: string;
+      name: string;
+      description: string;
+      emoji: string;
+      imageUrl?: string;
+    }) => {
+      if (formData.optionId) {
+        editOptionMutation.mutate({
+          optionId: formData.optionId,
+          name: formData.name,
+          description: formData.description,
+          emoji: formData.emoji,
+          imageUrl: formData.imageUrl,
+        });
+      } else {
+        addOptionMutation.mutate({
+          sectionId: formData.sectionId,
+          name: formData.name,
+          description: formData.description,
+          emoji: formData.emoji,
+          imageUrl: formData.imageUrl,
+        });
+      }
+    },
+    [addOptionMutation, editOptionMutation]
   );
 
   const jumpToResults = useCallback(() => {
@@ -247,15 +383,13 @@ export function PollApp() {
 
     const visible = sections.filter((s) => s.options.length > 0);
 
-    // sort options within sections
     const sortedOptions = visible.map((s) => {
       const opts = [...s.options];
       if (sort === "name") opts.sort((a, b) => a.name.localeCompare(b.name));
-      else opts.sort((a, b) => b.votes - a.votes); // popularity & section → by votes
+      else opts.sort((a, b) => b.votes - a.votes);
       return { ...s, options: opts };
     });
 
-    // sort sections
     if (sort === "popularity") {
       sortedOptions.sort((a, b) => b.totalVotes - a.totalVotes);
     } else if (sort === "name") {
@@ -267,7 +401,6 @@ export function PollApp() {
     return sortedOptions;
   }, [data, search, sort]);
 
-  // sections that have search-matched options (for auto-expand)
   const searchMatchedSectionIds = useMemo(() => {
     if (!search.trim()) return new Set<string>();
     return new Set(processedSections.map((s) => s.id));
@@ -313,8 +446,7 @@ export function PollApp() {
               </div>
             )}
 
-
-            {/* Section jump pills — mobile/tablet only */}
+            {/* Section jump pills — mobile/tablet */}
             {processedSections.length > 0 && (
               <SectionPills sections={processedSections} sectionRefs={sectionRefs} />
             )}
@@ -339,16 +471,13 @@ export function PollApp() {
                       mode={mode}
                       selectedIds={selected}
                       userPickIds={userPickIds}
+                      currentGuestId={guestId}
                       onToggle={toggleOption}
+                      onEditOption={handleEditOption}
+                      onDeleteOption={handleDeleteOption}
+                      onOpenSuggestModal={handleOpenSuggestModal}
                       view={view}
                       hasVoted={hasVoted}
-                      addingSectionId={
-                        addOptionMutation.isPending
-                          ? addOptionMutation.variables?.sectionId ?? null
-                          : null
-                      }
-                      onAddOption={handleAddOption}
-                      hasAddedCustomOption={hasAddedCustomOption}
                       expandedBySearch={searchMatchedSectionIds.has(section.id) && !!search.trim()}
                       sectionRef={(el) => {
                         if (el) sectionRefs.current.set(section.id, el);
@@ -366,7 +495,6 @@ export function PollApp() {
               </div>
             )}
 
-            {/* Simple stats bar placed below all lists & above footer */}
             <HeroStats data={data} hasVoted={hasVoted} />
           </div>
         ) : null}
@@ -392,6 +520,62 @@ export function PollApp() {
         isSubmitting={voteMutation.isPending}
         onSubmit={handleModalSubmit}
       />
+
+      <SuggestProductModal
+        open={isSuggestModalOpen}
+        onOpenChange={setIsSuggestModalOpen}
+        sectionId={suggestSectionId}
+        sectionName={suggestSectionName}
+        color={suggestColor}
+        editOption={editingOption}
+        isSubmitting={addOptionMutation.isPending || editOptionMutation.isPending}
+        onSubmit={handleSuggestSubmit}
+      />
+
+      {/* Delete Product Confirmation Modal */}
+      <AlertDialog open={!!deletingOption} onOpenChange={(open) => !open && setDeletingOption(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-500">
+              <Trash2 className="size-5" />
+              {t.modalDeleteProductTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-sm">
+              {deletingOption && t.modalDeleteProductDesc(deletingOption.name)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              disabled={deleteOptionMutation.isPending}
+              onClick={() => setDeletingOption(null)}
+            >
+              {t.cancel}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteOptionMutation.isPending}
+              onClick={() => {
+                if (deletingOption) {
+                  deleteOptionMutation.mutate(deletingOption.id);
+                }
+              }}
+              className="gap-1.5 font-semibold"
+            >
+              {deleteOptionMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t.submitting}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  {t.delete}
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -405,15 +589,12 @@ function cnGrid(view: ViewMode): string {
 function LoadingState() {
   return (
     <div className="space-y-5">
-      {/* HeroStats skeleton */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
         ))}
       </div>
-      {/* Toolbar skeleton */}
       <Skeleton className="h-14 rounded-xl" />
-      {/* Cards skeleton */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-48 rounded-xl" />

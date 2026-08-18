@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Crown, ImageIcon, Sparkles, Vote } from "lucide-react";
+import { Check, Crown, ImageIcon, Pencil, Sparkles, Trash2, Vote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -18,7 +18,10 @@ interface OptionRowProps {
   view?: "grid" | "list";
   isSelected: boolean;
   isUserPick: boolean;
+  currentGuestId?: string;
   onToggle: (id: string) => void;
+  onEdit?: (option: OptionResult) => void;
+  onDelete?: (option: OptionResult) => void;
 }
 
 function formatVotes(n: number): string {
@@ -73,11 +76,21 @@ export function OptionRow({
   view = "grid",
   isSelected,
   isUserPick,
+  currentGuestId,
   onToggle,
+  onEdit,
+  onDelete,
 }: OptionRowProps) {
   const c = SECTION_COLORS[color];
   const { t } = useLang();
   const indicatorClass = option.isLeading ? cn("bg-gradient-to-r", c.gradFrom, c.gradTo) : c.bar;
+
+  const isCreator =
+    option.isCustom &&
+    Boolean(
+      (option.createdById && currentGuestId && option.createdById === currentGuestId) ||
+        (!option.createdById && option.isCustom)
+    );
 
   // -------------------------------------------------------------
   // GRID VIEW (Large Visual Category Cards)
@@ -118,57 +131,90 @@ export function OptionRow({
             <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20" />
 
             {/* Checkbox overlay badge */}
-            <div className="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-lg backdrop-blur-md bg-background/85 px-2 py-1 shadow-sm border border-border/40">
+            <div className="pointer-events-none absolute left-1.5 top-1.5 sm:left-2.5 sm:top-2.5 flex items-center gap-1 sm:gap-1.5 rounded-lg backdrop-blur-md bg-background/85 px-1.5 py-0.5 sm:px-2 sm:py-1 shadow-sm border border-border/40">
               <Checkbox
                 checked={isSelected}
                 tabIndex={-1}
                 aria-label={`Vote for ${option.name}`}
-                className={cn(isSelected && "border-transparent", "size-4 shrink-0")}
+                className={cn(isSelected && "border-transparent", "size-3.5 sm:size-4 shrink-0")}
               />
-              <span className="text-[11px] font-medium text-foreground">
+              <span className="text-[10px] sm:text-[11px] font-medium text-foreground">
                 {isSelected ? t.picked : "Select"}
               </span>
             </div>
 
-            {/* Custom Tag Badge */}
-            {option.isCustom && (
-              <Badge
-                variant="outline"
-                className="absolute right-2.5 top-2.5 gap-1 border-amber-500/50 bg-amber-500/90 text-amber-950 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-semibold shadow-xs"
-              >
-                <Sparkles className="size-2.5" /> {t.custom}
-              </Badge>
-            )}
+            {/* Top Right Badges: Custom Tag and Creator Actions */}
+            <div className="absolute right-1.5 top-1.5 sm:right-2.5 sm:top-2.5 flex items-center gap-1">
+              {isCreator && (
+                <div className="flex items-center gap-0.5 sm:gap-1 rounded-lg backdrop-blur-md bg-background/90 p-0.5 shadow-sm border border-border/50">
+                  {onEdit && (
+                    <button
+                      type="button"
+                      title={t.edit}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(option);
+                      }}
+                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="size-2.5 sm:size-3" />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      title={t.delete}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(option);
+                      }}
+                      className="rounded p-1 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
+                    >
+                      <Trash2 className="size-2.5 sm:size-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {option.isCustom && !isCreator && (
+                <Badge
+                  variant="outline"
+                  className="gap-0.5 sm:gap-1 border-amber-500/50 bg-amber-500/90 text-amber-950 backdrop-blur-sm px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold shadow-xs"
+                >
+                  <Sparkles className="size-2 sm:size-2.5" /> {t.custom}
+                </Badge>
+              )}
+            </div>
 
             {/* Emoji chip over bottom left of image */}
-            <div className="absolute left-2.5 bottom-2 flex items-center justify-center size-7 rounded-full bg-background/90 backdrop-blur-md shadow-sm border border-border/30 text-sm">
+            <div className="absolute left-1.5 bottom-1.5 sm:left-2.5 sm:bottom-2 flex items-center justify-center size-6 sm:size-7 rounded-full bg-background/90 backdrop-blur-md shadow-sm border border-border/30 text-xs sm:text-sm">
               {option.emoji}
             </div>
 
             {isSelected && (
-              <div className="absolute right-2.5 bottom-2">
-                <Badge className={cn("gap-1 text-[11px] font-medium shadow-sm", c.bar, "text-white")}>
-                  <Check className="size-3" /> {t.picked}
+              <div className="absolute right-1.5 bottom-1.5 sm:right-2.5 sm:bottom-2">
+                <Badge className={cn("gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] font-medium shadow-sm px-1.5 py-0.5", c.bar, "text-white")}>
+                  <Check className="size-2.5 sm:size-3" /> {t.picked}
                 </Badge>
               </div>
             )}
           </div>
 
           {/* Card Body */}
-          <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-4">
+          <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-4">
             <div>
-              <h4 className="font-semibold text-sm sm:text-base leading-snug tracking-tight line-clamp-2 text-foreground">
+              <h4 className="font-semibold text-xs sm:text-base leading-snug tracking-tight line-clamp-2 text-foreground">
                 {option.name}
               </h4>
-              <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              <p className="hidden sm:block mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                 {option.description}
               </p>
             </div>
 
-            <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5 text-xs text-muted-foreground">
+            <div className="mt-2 sm:mt-3 flex items-center justify-between border-t border-border/40 pt-2 sm:pt-2.5 text-[10px] sm:text-xs text-muted-foreground">
               <span className="font-medium">{t.votes}: {formatVotes(option.votes)}</span>
-              <span className={cn("text-xs font-semibold", isSelected ? c.text : "text-muted-foreground")}>
-                {isSelected ? "✓ Selected" : "Tap to choose"}
+              <span className={cn("text-[10px] sm:text-xs font-semibold", isSelected ? c.text : "text-muted-foreground")}>
+                {isSelected ? "✓ Selected" : "Tap"}
               </span>
             </div>
           </div>
@@ -201,56 +247,82 @@ export function OptionRow({
 
           {/* Leading / Crown badge */}
           {option.isLeading && (
-            <Badge className={cn("absolute left-2.5 top-2.5 gap-1 shadow-sm font-semibold text-xs", c.bar, "text-white")}>
-              <Crown className="size-3" /> Leading #{option.rank}
+            <Badge className={cn("absolute left-1.5 top-1.5 sm:left-2.5 sm:top-2.5 gap-0.5 sm:gap-1 shadow-sm font-semibold text-[10px] sm:text-xs px-1.5 py-0.5", c.bar, "text-white")}>
+              <Crown className="size-2.5 sm:size-3" /> #{option.rank}
             </Badge>
           )}
 
-          {option.isCustom && (
-            <Badge
-              variant="outline"
-              className="absolute right-2.5 top-2.5 gap-1 border-amber-500/50 bg-amber-500/90 text-amber-950 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-semibold shadow-xs"
-            >
-              <Sparkles className="size-2.5" /> {t.custom}
-            </Badge>
-          )}
+          {/* Top Right Badges */}
+          <div className="absolute right-1.5 top-1.5 sm:right-2.5 sm:top-2.5 flex items-center gap-1">
+            {isCreator && (
+              <div className="flex items-center gap-0.5 sm:gap-1 rounded-lg backdrop-blur-md bg-background/90 p-0.5 shadow-sm border border-border/50">
+                {onEdit && (
+                  <button
+                    type="button"
+                    title={t.edit}
+                    onClick={() => onEdit(option)}
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="size-2.5 sm:size-3" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    title={t.delete}
+                    onClick={() => onDelete(option)}
+                    className="rounded p-1 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
+                  >
+                    <Trash2 className="size-2.5 sm:size-3" />
+                  </button>
+                )}
+              </div>
+            )}
 
-          {isUserPick && (
-            <div className="absolute right-2.5 top-2.5">
-              <Badge variant="secondary" className={cn("gap-1 text-xs font-medium shadow-sm", c.bg, c.text)}>
-                <Vote className="size-3" /> {t.yourPick}
+            {option.isCustom && !isCreator && (
+              <Badge
+                variant="outline"
+                className="gap-0.5 sm:gap-1 border-amber-500/50 bg-amber-500/90 text-amber-950 backdrop-blur-sm px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold shadow-xs"
+              >
+                <Sparkles className="size-2 sm:size-2.5" /> {t.custom}
               </Badge>
-            </div>
-          )}
+            )}
+
+            {isUserPick && (
+              <Badge variant="secondary" className={cn("gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium shadow-sm px-1.5 py-0.5", c.bg, c.text)}>
+                <Vote className="size-2.5 sm:size-3" /> {t.yourPick}
+              </Badge>
+            )}
+          </div>
 
           {/* Emoji */}
-          <div className="absolute left-2.5 bottom-2 flex items-center justify-center size-7 rounded-full bg-background/90 backdrop-blur-md shadow-sm border border-border/30 text-sm">
+          <div className="absolute left-1.5 bottom-1.5 sm:left-2.5 sm:bottom-2 flex items-center justify-center size-6 sm:size-7 rounded-full bg-background/90 backdrop-blur-md shadow-sm border border-border/30 text-xs sm:text-sm">
             {option.emoji}
           </div>
 
-          <div className="absolute right-2.5 bottom-2 rounded-lg bg-black/75 px-2 py-0.5 backdrop-blur-md border border-white/10">
-            <span className="text-xs font-bold text-white tabular-nums">
+          <div className="absolute right-1.5 bottom-1.5 sm:right-2.5 sm:bottom-2 rounded-md sm:rounded-lg bg-black/75 px-1.5 sm:px-2 py-0.5 backdrop-blur-md border border-white/10">
+            <span className="text-[10px] sm:text-xs font-bold text-white tabular-nums">
               {option.percentage.toFixed(1)}%
             </span>
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-4">
+        <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-4">
           <div>
             <div className="flex items-start justify-between gap-1.5">
-              <h4 className="font-semibold text-sm sm:text-base leading-snug tracking-tight text-foreground line-clamp-2">
+              <h4 className="font-semibold text-xs sm:text-base leading-snug tracking-tight text-foreground line-clamp-2">
                 {option.name}
               </h4>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="hidden sm:block mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {option.description}
             </p>
           </div>
 
-          <div className="mt-3 space-y-1.5 border-t border-border/40 pt-2.5">
-            <Progress value={option.percentage} indicatorClassName={indicatorClass} className="h-2" />
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="mt-2 sm:mt-3 space-y-1 sm:space-y-1.5 border-t border-border/40 pt-2 sm:pt-2.5">
+            <Progress value={option.percentage} indicatorClassName={indicatorClass} className="h-1.5 sm:h-2" />
+            <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-muted-foreground">
               <span>{formatVotes(option.votes)} {t.votes}</span>
               <span className="font-medium text-foreground">{option.percentage.toFixed(1)}%</span>
             </div>
@@ -315,6 +387,38 @@ export function OptionRow({
           <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground sm:text-xs">{option.description}</p>
         </div>
 
+        {/* Creator actions */}
+        {isCreator && (
+          <div className="flex items-center gap-1 shrink-0">
+            {onEdit && (
+              <button
+                type="button"
+                title={t.edit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(option);
+                }}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                title={t.delete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(option);
+                }}
+                className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         {isSelected && (
           <Badge variant="secondary" className={cn("shrink-0 text-[10px] sm:text-xs", c.bg, c.text, "border-transparent")}>
             <Check className="size-3" /> {t.picked}
@@ -359,6 +463,32 @@ export function OptionRow({
           </div>
           <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground sm:text-xs">{option.description}</p>
         </div>
+
+        {/* Creator actions */}
+        {isCreator && (
+          <div className="flex items-center gap-1 shrink-0">
+            {onEdit && (
+              <button
+                type="button"
+                title={t.edit}
+                onClick={() => onEdit(option)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                title={t.delete}
+                onClick={() => onDelete(option)}
+                className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
 
         {isUserPick && (
           <Badge variant="secondary" className={cn("shrink-0 text-[10px] sm:text-xs", c.bg, c.text, "border-transparent")}>

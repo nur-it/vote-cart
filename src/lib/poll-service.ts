@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { db } from "./db";
 import { SEED_SECTIONS } from "./poll-data";
+import { autoTranslatePair } from "./translate";
 import type { OptionResult, PollResult, SectionColor, SectionResult } from "./types";
 
 export type Lang = "en" | "ru";
@@ -97,6 +98,7 @@ export async function computeResults(votedOptionIds: string[] = [], lang: Lang =
       rank: rankMap.get(o.id) ?? 0,
       isLeading: leading ? o.id === leading.id : false,
       isCustom: o.isCustom,
+      createdById: o.createdById,
     }));
 
     options.sort((a, b) => b.votes - a.votes);
@@ -222,12 +224,24 @@ function randomSuffix(len = 4): string {
 export async function addCustomOption(
   sectionId: string,
   rawName: string,
-  emoji: string,
+  rawDesc?: string,
+  emoji: string = "✨",
   imageUrl?: string,
+  createdById?: string,
   votedOptionIds: string[] = [],
   lang: Lang = "en"
 ): Promise<{
-  option: { id: string; sectionId: string; name: string; emoji: string; imageUrl?: string | null; isCustom: boolean; created: boolean };
+  option: {
+    id: string;
+    sectionId: string;
+    name: string;
+    description: string;
+    emoji: string;
+    imageUrl?: string | null;
+    isCustom: boolean;
+    createdById?: string | null;
+    created: boolean;
+  };
   poll: PollResult;
 }> {
   await ensureSeeded();
@@ -235,22 +249,40 @@ export async function addCustomOption(
   const section = await db.section.findUnique({ where: { id: sectionId } });
   if (!section) throw new Error("Section not found");
 
-  const name = rawName.trim().replace(/\s+/g, " ").slice(0, 60);
+  const name = rawName.trim().replace(/\s+/g, " ").slice(0, 80);
   if (!name) throw new Error("Option name is required");
+
+  const desc = (rawDesc || "Community-suggested product.").trim().replace(/\s+/g, " ").slice(0, 300);
 
   const existing = await db.option.findMany({
     where: { sectionId },
-    select: { id: true, name: true, emoji: true, imageUrl: true, isCustom: true },
+    select: { id: true, name: true, description: true, emoji: true, imageUrl: true, isCustom: true, createdById: true },
   });
   const match = existing.find((o) => o.name.toLowerCase() === name.toLowerCase());
 
   let option;
   if (match) {
-    option = { id: match.id, sectionId, name: match.name, emoji: match.emoji, imageUrl: match.imageUrl, isCustom: match.isCustom, created: false };
+    option = {
+      id: match.id,
+      sectionId,
+      name: match.name,
+      description: match.description,
+      emoji: match.emoji,
+      imageUrl: match.imageUrl,
+      isCustom: match.isCustom,
+      createdById: match.createdById,
+      created: false,
+    };
   } else {
     let slug = `${toSlug(name)}-${randomSuffix()}`;
     const clash = await db.option.findUnique({ where: { slug } });
     if (clash) slug = `${toSlug(name)}-${randomSuffix(6)}`;
+
+    // Perform bilingual translation in parallel
+    const [namePair, descPair] = await Promise.all([
+      autoTranslatePair(name),
+      autoTranslatePair(desc),
+    ]);
 
     const created = await db.option.create({
       data: {
@@ -259,17 +291,103 @@ export async function addCustomOption(
         name,
         emoji: emoji || "✨",
         imageUrl: imageUrl?.trim() || null,
-        description: "Community-added option.",
-        name_i18n: { en: name, ru: "" },
-        desc_i18n: { en: "Community-added option.", ru: "" },
+        description: desc,
+        name_i18n: namePair,
+        desc_i18n: descPair,
         votes: 0,
         order: existing.length,
         isCustom: true,
+        createdById: createdById || null,
       },
     });
-    option = { id: created.id, sectionId, name: created.name, emoji: created.emoji, imageUrl: created.imageUrl, isCustom: true, created: true };
+
+    option = {
+      id: created.id,
+      sectionId,
+      name: resolveI18n(created.name_i18n, lang) || created.name,
+      description: resolveI18n(created.desc_i18n, lang) || created.description,
+      emoji: created.emoji,
+      imageUrl: created.imageUrl,
+      isCustom: true,
+      createdById: created.createdById,
+      created: true,
+    };
   }
 
   const poll = await computeResults(votedOptionIds, lang);
   return { option, poll };
 }
+
+export async function editCustomOption(
+  optionId: string,
+  rawName: string,
+  rawDesc?: string,
+  emoji?: string,
+  imageUrl?: string,
+  guestId?: string,
+  votedOptionIds: string[] = [],
+  lang: Lang = "en"
+): Promise<{ option: OptionResult; poll: PollResult }> {
+  await ensureSeeded();
+
+  const existing = await db.option.findUnique({ where: { id: optionId } });
+  if (!existing) throw new Error("Product not found");
+  if (!existing.isCustom) throw new Error("Default options cannot be edited");
+
+  // Verify ownership if createdById is present
+  if (existing.createdById && guestId && existing.createdById !== guestId) {
+    throw new Error("You can only edit products you created");
+  }
+
+  const name = rawName.trim().replace(/\s+/g, " ").slice(0, 80);
+  if (!name) throw new Error("Product title is required");
+
+  const desc = (rawDesc || existing.description).trim().replace(/\s+/g, " ").slice(0, 300);
+
+  // Parallel translations
+  const [namePair, descPair] = await Promise.all([
+    autoTranslatePair(name),
+    autoTranslatePair(desc),
+  ]);
+
+  const updated = await db.option.update({
+    where: { id: optionId },
+    data: {
+      name,
+      description: desc,
+      emoji: emoji || existing.emoji,
+      imageUrl: imageUrl !== undefined ? (imageUrl.trim() || null) : existing.imageUrl,
+      name_i18n: namePair,
+      desc_i18n: descPair,
+    },
+  });
+
+  const poll = await computeResults(votedOptionIds, lang);
+  const foundOption = poll.sections.flatMap((s) => s.options).find((o) => o.id === updated.id);
+
+  if (!foundOption) throw new Error("Failed to resolve updated option");
+
+  return { option: foundOption, poll };
+}
+
+export async function deleteCustomOption(
+  optionId: string,
+  guestId?: string,
+  votedOptionIds: string[] = [],
+  lang: Lang = "en"
+): Promise<PollResult> {
+  await ensureSeeded();
+
+  const existing = await db.option.findUnique({ where: { id: optionId } });
+  if (!existing) throw new Error("Product not found");
+  if (!existing.isCustom) throw new Error("Default options cannot be deleted");
+
+  if (existing.createdById && guestId && existing.createdById !== guestId) {
+    throw new Error("You can only delete products you created");
+  }
+
+  await db.option.delete({ where: { id: optionId } });
+
+  return computeResults(votedOptionIds, lang);
+}
+
