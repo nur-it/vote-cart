@@ -240,6 +240,7 @@ export function PollApp() {
     },
     onSuccess: (result, optionId) => {
       queryClient.setQueryData(["poll", lang], result.poll);
+      setDeletingOption(null);
       setSelected((prev) => {
         const next = new Set(prev);
         next.delete(optionId);
@@ -324,10 +325,10 @@ export function PollApp() {
   }, [data]);
 
   const handleDeleteOption = useCallback(
-    (optionId: string) => {
-      deleteOptionMutation.mutate(optionId);
+    (option: OptionResult) => {
+      setDeletingOption(option);
     },
-    [deleteOptionMutation]
+    []
   );
 
   const handleSuggestSubmit = useCallback(
@@ -530,6 +531,51 @@ export function PollApp() {
         isSubmitting={addOptionMutation.isPending || editOptionMutation.isPending}
         onSubmit={handleSuggestSubmit}
       />
+
+      {/* Delete Product Confirmation Modal */}
+      <AlertDialog open={!!deletingOption} onOpenChange={(open) => !open && setDeletingOption(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-500">
+              <Trash2 className="size-5" />
+              {t.modalDeleteProductTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-sm">
+              {deletingOption && t.modalDeleteProductDesc(deletingOption.name)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              disabled={deleteOptionMutation.isPending}
+              onClick={() => setDeletingOption(null)}
+            >
+              {t.cancel}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteOptionMutation.isPending}
+              onClick={() => {
+                if (deletingOption) {
+                  deleteOptionMutation.mutate(deletingOption.id);
+                }
+              }}
+              className="gap-1.5 font-semibold"
+            >
+              {deleteOptionMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t.submitting}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  {t.delete}
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
