@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, TrendingUp, Users } from "lucide-react";
+import { Plus, TrendingUp, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { AddOptionInput } from "./add-option-input";
 import { SectionIcon } from "./icon-map";
 import { OptionRow } from "./option-row";
 import type { OptionResult, SectionResult } from "@/lib/types";
 import { SECTION_COLORS } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 
-const INITIAL_VISIBLE = 4;
+const INITIAL_CHUNK = 4;
+const CHUNK_INCREMENT = 4;
 
 interface SectionCardProps {
   section: SectionResult;
@@ -21,12 +23,13 @@ interface SectionCardProps {
   mode: "select" | "result";
   selectedIds: Set<string>;
   userPickIds: Set<string>;
+  currentGuestId?: string;
   onToggle: (id: string) => void;
+  onEditOption?: (option: OptionResult) => void;
+  onDeleteOption?: (option: OptionResult) => void;
+  onOpenSuggestModal?: (sectionId: string, sectionName: string, color: SectionResult["color"]) => void;
   view: "grid" | "list";
   hasVoted: boolean;
-  addingSectionId: string | null;
-  onAddOption: (sectionId: string, name: string, emoji?: string, imageUrl?: string) => void;
-  hasAddedCustomOption: boolean;
   expandedBySearch?: boolean;
   sectionRef?: (el: HTMLElement | null) => void;
 }
@@ -37,132 +40,194 @@ export function SectionCard({
   mode,
   selectedIds,
   userPickIds,
+  currentGuestId,
   onToggle,
+  onEditOption,
+  onDeleteOption,
+  onOpenSuggestModal,
   view,
   hasVoted,
-  addingSectionId,
-  onAddOption,
-  hasAddedCustomOption,
   expandedBySearch = false,
   sectionRef,
 }: SectionCardProps) {
   const c = SECTION_COLORS[section.color];
-  const [expanded, setExpanded] = useState(false);
-  const isExpanded = expanded || expandedBySearch;
   const { t } = useLang();
 
-  if (options.length === 0) return null;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_CHUNK);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // In select mode, always show options that are selected even if collapsed
+  // In select mode, make sure selected options are always included in visible
   const selectedInSection = options.filter((o) => selectedIds.has(o.id) || userPickIds.has(o.id));
-  const visibleOptions = isExpanded
-    ? options
-    : options.slice(0, Math.max(INITIAL_VISIBLE, selectedInSection.length));
-  const hiddenCount = options.length - visibleOptions.length;
+  const effectiveCount = expandedBySearch
+    ? options.length
+    : Math.max(visibleCount, selectedInSection.length, INITIAL_CHUNK);
+
+  const visibleOptions = options.slice(0, effectiveCount);
+  const hasMore = visibleOptions.length < options.length && !expandedBySearch;
+
+  // YouTube-style IntersectionObserver progressive loader
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first && first.isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + CHUNK_INCREMENT);
+            setIsLoadingMore(false);
+          }, 350);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore]);
+
+  if (options.length === 0) return null;
 
   return (
     <Card
       ref={sectionRef}
       className={cn(
-        "gap-0 overflow-hidden p-0 py-0",
+        "gap-0 overflow-hidden p-0 py-0 shadow-xs border-border/80",
         view === "list" && "max-w-3xl mx-auto w-full"
       )}
     >
       {/* Section header */}
-      <div className={cn("relative border-b p-3 sm:p-4", c.bg)}>
-        <div className="flex items-start gap-2.5 sm:gap-3">
-          <div
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg bg-background shadow-xs ring-1 sm:size-10 sm:rounded-xl",
-              c.ring
-            )}
-          >
-            <SectionIcon name={section.icon} className={cn("size-4 sm:size-5", c.text)} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <h3 className="text-sm font-semibold leading-tight sm:text-base">
-                {section.name}
-              </h3>
-              <Badge variant="outline" className="border-border/60 text-[10px] px-1.5 py-0 sm:text-xs sm:px-2 sm:py-0.5">
-                {options.length} {t.options}
-              </Badge>
-            </div>
-            <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground sm:text-xs">
-              {section.description}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:mt-3 sm:gap-x-4 sm:text-xs">
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Users className="size-3 sm:size-3.5" />
-            {section.totalVotes.toLocaleString("en-US")} {t.votes}
-          </span>
-          {mode === "result" && section.leadingOptionName && (
-            <span className={cn("inline-flex items-center gap-1 font-medium", c.text)}>
-              <TrendingUp className="size-3 sm:size-3.5" />
-              {t.leading} {section.leadingOptionName}
-              {section.leadingOptionPercentage != null && (
-                <span className="tabular-nums opacity-80">
-                  ({section.leadingOptionPercentage.toFixed(1)}%)
-                </span>
+      <div className={cn("relative border-b p-3 sm:p-4.5 transition-colors", c.bg)}>
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          {/* Section Icon & Titles */}
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+            <div
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-xl bg-background shadow-xs ring-1 sm:size-11 sm:rounded-2xl",
+                c.ring
               )}
-            </span>
+            >
+              <SectionIcon name={section.icon} className={cn("size-4.5 sm:size-5.5", c.text)} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              {/* Title + Meta tags inline */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="text-sm sm:text-base font-bold text-foreground leading-snug">
+                  {section.name}
+                </h3>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center rounded-md bg-background/80 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium border border-border/50 shadow-2xs">
+                    {options.length} {t.options}
+                  </span>
+                  <span className="opacity-40">•</span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <Users className="size-3 text-muted-foreground/80" />
+                    {section.totalVotes.toLocaleString("en-US")} {t.votes}
+                  </span>
+                </div>
+              </div>
+
+              {/* Subtitle / Description - Hidden on mobile for maximum cleanliness, visible on desktop */}
+              <p className="hidden sm:block mt-0.5 text-[11px] sm:text-xs text-muted-foreground/90 leading-relaxed line-clamp-2">
+                {section.description}
+              </p>
+
+              {/* Result Mode: Leading Option Badge */}
+              {mode === "result" && section.leadingOptionName && (
+                <div className={cn("mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold", c.text)}>
+                  <TrendingUp className="size-3" />
+                  <span>{t.leading} {section.leadingOptionName}</span>
+                  {section.leadingOptionPercentage != null && (
+                    <span className="tabular-nums opacity-85">
+                      ({section.leadingOptionPercentage.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Header Quick-Action Button: "+ Suggest Product" */}
+          {onOpenSuggestModal && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onOpenSuggestModal(section.id, section.name, section.color)}
+              className={cn(
+                "h-8 sm:h-9 shrink-0 gap-1.5 rounded-xl border px-2.5 sm:px-3 text-xs font-semibold shadow-xs transition-all duration-200 self-start sm:self-center",
+                c.border,
+                c.text,
+                "bg-background/90 hover:bg-background hover:scale-102"
+              )}
+            >
+              <Plus className="size-3.5 sm:size-4" />
+              <span className="hidden sm:inline">{t.suggestProductHeader}</span>
+              <span className="sm:hidden">{t.suggestProductShort}</span>
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Options */}
+      {/* Options Grid / List */}
       <div
         className={cn(
-          "p-3 sm:p-5",
+          "p-2.5 sm:p-5",
           view === "grid"
-            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4"
+            ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4"
             : "flex flex-col gap-2.5 sm:gap-3"
         )}
       >
-        {visibleOptions.map((opt) => (
-          <OptionRow
-            key={opt.id}
-            option={opt}
-            color={section.color}
-            mode={mode}
-            view={view}
-            isSelected={selectedIds.has(opt.id)}
-            isUserPick={userPickIds.has(opt.id)}
-            onToggle={onToggle}
-          />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {visibleOptions.map((opt) => (
+            <OptionRow
+              key={opt.id}
+              option={opt}
+              color={section.color}
+              mode={mode}
+              view={view}
+              isSelected={selectedIds.has(opt.id)}
+              isUserPick={userPickIds.has(opt.id)}
+              currentGuestId={currentGuestId}
+              onToggle={onToggle}
+              onEdit={onEditOption}
+              onDelete={onDeleteOption}
+            />
+          ))}
+        </AnimatePresence>
 
-        {/* Show more / less toggle */}
-        {options.length > INITIAL_VISIBLE && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className={cn(
-              "col-span-full flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground text-center",
-              c.text && isExpanded && cn("border-current/30", c.text)
-            )}
-          >
-            <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="inline-flex">
-              <ChevronDown className="size-3.5" />
-            </motion.span>
-            {isExpanded ? t.showLess : t.showMore(hiddenCount)}
-          </button>
+        {/* YouTube-Style Progressive Scroll Skeletons */}
+        {isLoadingMore && (
+          <>
+            {Array.from({ length: Math.min(2, options.length - visibleOptions.length) }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className={cn(
+                  "overflow-hidden rounded-2xl border border-border/40 bg-card p-3 space-y-3",
+                  view === "list" ? "flex items-center gap-3 space-y-0" : ""
+                )}
+              >
+                <Skeleton className={view === "list" ? "size-14 rounded-xl" : "aspect-square w-full rounded-xl"} />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </>
         )}
 
-        {!hasVoted && (
-          <div className="col-span-full">
-            <AddOptionInput
-              sectionId={section.id}
-              sectionName={section.name}
-              color={section.color}
-              isAdding={addingSectionId === section.id}
-              hasVoted={hasVoted}
-              onAdd={onAddOption}
-              hasAddedCustomOption={hasAddedCustomOption}
-            />
+        {/* Intersection Sentinel */}
+        {hasMore && (
+          <div ref={sentinelRef} className="col-span-full h-6 w-full flex items-center justify-center">
+            <span className="text-[10px] text-muted-foreground/60">{t.loadingMore}</span>
           </div>
         )}
       </div>
@@ -170,11 +235,7 @@ export function SectionCard({
   );
 }
 
-export function AnimatedSections({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AnimatedSections({ children }: { children: React.ReactNode }) {
   return (
     <motion.div layout className="contents">
       {children}

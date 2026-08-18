@@ -19,4 +19,5 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
 };
 
+// Next.js Configuration
 export default nextConfig;

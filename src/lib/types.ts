@@ -163,6 +163,7 @@ export interface OptionResult {
   rank: number; // 1-based rank within its section
   isLeading: boolean; // top of its section
   isCustom: boolean; // true = added by a voter (not in the seeded list)
+  createdById?: string | null; // guest id of creator
 }
 
 export interface SectionResult {
@@ -209,6 +210,15 @@ export interface SimulatePayload {
 export interface AddOptionPayload {
   sectionId: string;
   name: string;
+  description?: string;
+  emoji?: string;
+  imageUrl?: string;
+}
+
+export interface EditOptionPayload {
+  optionId: string;
+  name: string;
+  description?: string;
   emoji?: string;
   imageUrl?: string;
 }
@@ -219,10 +229,13 @@ export interface AddOptionResponse {
     id: string;
     sectionId: string;
     name: string;
+    description: string;
     emoji: string;
     imageUrl?: string | null;
     isCustom: boolean;
+    createdById?: string | null;
     created: boolean; // false if an existing matching option was returned
   };
   poll: PollResult;
 }
+

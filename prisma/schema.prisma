@@ -42,10 +42,12 @@ model Option {
   votes       Int      @default(0)
   order       Int      @default(0)
   isCustom    Boolean  @default(false) // true = added by a voter
+  createdById String?  // Guest/creator identifier for CRUD
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([sectionId])
+  @@index([createdById])
   @@map("options")
 }
 
