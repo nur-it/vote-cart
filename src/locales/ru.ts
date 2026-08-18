@@ -87,7 +87,14 @@ const ru: Locale = {
   voters: "Голосующих",
   totalVotes: "Всего голосов",
   categories: "Категорий",
-  topPick: "Лидер:",
+  topPick: "Лидер",
+
+  // Footer
+  footerDesc: "Платформа голосования за категории товаров в реальном времени. Проценты рассчитываются от общего числа голосов.",
+  featureRealtime: "Результаты live",
+  featureCategories: "100+ категорий",
+  featureCommunity: "Выбор сообщества",
+  footerRights: "Открытое голосование покупателей.",
 
   // Toasts
   toastVoteTitle: "Голос записан! 🎉",
