@@ -85,7 +85,14 @@ const en = {
   voters: "Voters",
   totalVotes: "Total Votes",
   categories: "Categories",
-  topPick: "Top pick:",
+  topPick: "Top pick",
+
+  // Footer
+  footerDesc: "A real-time ecommerce category voting platform. Percentages are calculated as each option's share of all votes cast.",
+  featureRealtime: "Real-time results",
+  featureCategories: "100+ categories",
+  featureCommunity: "Community picks",
+  footerRights: "Community-driven product discovery.",
 
   // Toasts
   toastVoteTitle: "Vote recorded! 🎉",

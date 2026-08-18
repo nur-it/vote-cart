@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VoteCart — Ecommerce Category Voting",
+  title: "VoteCart - Ecommerce Category Voting",
   description:
     "Vote for your favourite ecommerce product categories and watch real-time, YouTube-style percentage results across 100+ options.",
   keywords: [

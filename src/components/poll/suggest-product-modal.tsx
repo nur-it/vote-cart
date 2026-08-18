@@ -23,14 +23,20 @@ import {
   Sparkles,
   CheckCircle2,
   Layers,
+  ChevronDown,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { compressImageToWebP } from "@/lib/image-compress";
 import type { OptionResult, SectionColor } from "@/lib/types";
 import { SECTION_COLORS } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 
-const EMOJI_CHOICES = ["✨", "⭐", "🛒", "🏷️", "❤️", "🔥", "🆕", "🍫", "🍯", "☕", "🥫", "🐟", "🥟", "🧀"];
+const EMOJI_CHOICES = [
+  "✨", "⭐", "🛒", "🏷️", "❤️", "🔥", "🆕",
+  "🍫", "🍯", "☕", "🥫", "🐟", "🥟", "🧀",
+  "🍵", "🍞", "🧴", "🎁", "🍕", "🍣", "🍎"
+];
 
 interface SuggestProductModalProps {
   open: boolean;
@@ -66,6 +72,7 @@ export function SuggestProductModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [emoji, setEmoji] = useState("✨");
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [imageTab, setImageTab] = useState<"url" | "upload">("url");
   const [isCompressing, setIsCompressing] = useState(false);
@@ -175,29 +182,6 @@ export function SuggestProductModal({
               disabled={isSubmitting}
               className="text-xs sm:text-sm resize-none"
             />
-          </div>
-
-          {/* Emoji Badge Selector */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">{t.productEmojiLabel}</label>
-            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 px-1.5">
-              {EMOJI_CHOICES.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  aria-pressed={emoji === e}
-                  onClick={() => setEmoji(e)}
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-lg border text-sm transition-all hover:scale-105 select-none",
-                    emoji === e
-                      ? cn(c.border, c.bg, "ring-2 ring-offset-1 ring-offset-background", c.ring, "scale-105 shadow-xs")
-                      : "border-border/70 bg-muted/40 hover:bg-muted"
-                  )}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Smart Hybrid Image (URL or Upload) */}
@@ -313,6 +297,53 @@ export function SuggestProductModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Emoji Badge Selector — Single-row Notion/Slack Style Popover */}
+          <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-3 py-2">
+            <div className="space-y-0.5">
+              <label className="text-xs font-semibold text-foreground">{t.productEmojiLabel}</label>
+              <p className="text-[11px] text-muted-foreground">Used as badge & list marker</p>
+            </div>
+
+            <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium shadow-2xs transition-all hover:bg-accent",
+                    c.border
+                  )}
+                >
+                  <span className="text-base leading-none">{emoji}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal">Change</span>
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-68 p-2.5 shadow-lg">
+                <div className="text-[11px] font-semibold text-muted-foreground mb-2 px-1">Choose category icon</div>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {EMOJI_CHOICES.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => {
+                        setEmoji(e);
+                        setIsEmojiPickerOpen(false);
+                      }}
+                      className={cn(
+                        "flex size-8 items-center justify-center rounded-md border text-sm transition-transform hover:scale-110",
+                        emoji === e
+                          ? cn(c.border, c.bg, "ring-1 ring-offset-1 ring-offset-background", c.ring)
+                          : "border-border/60 bg-muted/30 hover:bg-muted"
+                      )}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DialogFooter className="pt-2 sm:justify-end gap-2">
